@@ -78,4 +78,25 @@ describe('backup and restore', () => {
     zip.remove('photos/ph1.jpg');
     await expect(parseBackup(await zip.generateAsync({ type: 'blob' }))).rejects.toThrow(/عکس/);
   });
+
+  it('rejects broken references and drops unknown setting keys', async () => {
+    const book = await createBook({ title: 'x' });
+    await db.kv.put({ key: 'profile', value: { name: 'من' } });
+    const zip = await JSZip.loadAsync(await (await createBackup('0.1.0')).arrayBuffer());
+    const data = JSON.parse(await zip.file('data.json')!.async('string'));
+
+    data.kv.push({ key: 'evil', value: { x: 1 } });
+    zip.file('data.json', JSON.stringify(data));
+    const parsed = await parseBackup(await zip.generateAsync({ type: 'blob' }));
+    expect(parsed.data.kv.map((r) => (r as { key: string }).key)).toEqual(['profile']);
+
+    data.bookCopies[0].workId = 'missing';
+    zip.file('data.json', JSON.stringify(data));
+    await expect(parseBackup(await zip.generateAsync({ type: 'blob' }))).rejects.toThrow(/bookCopies/);
+
+    data.bookCopies[0].workId = book.workId;
+    data.bookCopies[0].status = 'eaten';
+    zip.file('data.json', JSON.stringify(data));
+    await expect(parseBackup(await zip.generateAsync({ type: 'blob' }))).rejects.toThrow(/bookCopies/);
+  });
 });
