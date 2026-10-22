@@ -1,1 +1,60 @@
-export {};
+/// <reference lib="webworker" />
+import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
+import { DerangDB } from './db/db';
+import { REMINDER_TAG } from './lib/reminderTag';
+
+declare const self: ServiceWorkerGlobalScope;
+
+// Offline: precache the whole app shell. Updates activate immediately so a new
+// deploy reaches the phone on the next launch.
+precacheAndRoute(self.__WB_MANIFEST);
+cleanupOutdatedCaches();
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+
+interface PeriodicSyncEvent extends ExtendableEvent {
+  tag: string;
+}
+
+async function maybeRemind() {
+  const db = new DerangDB();
+  try {
+    const setting = (await db.kv.get('reminder'))?.value as { enabled?: boolean; hour?: number } | undefined;
+    if (!setting?.enabled) return;
+    const now = new Date();
+    if (now.getHours() < (setting.hour ?? 21)) return;
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const last = (await db.kv.get('reminder.lastShown'))?.value as number | undefined;
+    if (last && last >= today.getTime()) return;
+    const readToday = await db.readingLogs.where('at').aboveOrEqual(today.getTime()).count();
+    const reading = await db.bookCopies.where('status').equals('reading').count();
+    if (readToday > 0 || reading === 0) return;
+    await db.kv.put({ key: 'reminder.lastShown', value: now.getTime() });
+    await self.registration.showNotification('درنگ', {
+      body: 'اگر حوصله‌اش هست، چند صفحه‌ای از کتابت بخوان.',
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      lang: 'fa',
+      dir: 'rtl',
+      tag: REMINDER_TAG,
+    });
+  } finally {
+    db.close();
+  }
+}
+
+self.addEventListener('periodicsync', (event) => {
+  const e = event as PeriodicSyncEvent;
+  if (e.tag === REMINDER_TAG) e.waitUntil(maybeRemind());
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((list) => {
+      const open = list[0];
+      return open ? open.focus() : self.clients.openWindow('./');
+    }),
+  );
+});

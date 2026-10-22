@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { z } from 'zod';
 import { DATA_TABLES, db, type DataTable } from '../db/db';
 import type { Photo } from '../db/types';
 
@@ -8,8 +9,25 @@ export const BACKUP_EXT = '.drng';
 
 /** KV keys that must never leave the device (secrets live in a separate DB anyway). */
 const PRIVATE_KV = new Set<string>(['ai.secret']);
-/** Only known setting keys are restored from a file. */
-const ALLOWED_KV = new Set<string>(['profile', 'reminder', 'ai', 'dismissed']);
+
+/**
+ * Settings restorable from a file. The AI gateway address is a device-local trust
+ * decision and is never taken from a file (it would decide where the API key goes).
+ */
+const KV_SCHEMAS = {
+  profile: z.object({ name: z.string().max(100).optional(), photoId: z.string().optional(), bio: z.string().max(2000).optional() }).strip(),
+  reminder: z.object({ enabled: z.boolean(), hour: z.number().int().min(0).max(23) }).strip(),
+  ai: z.object({ provider: z.literal('anthropic'), model: z.string().regex(/^[\w.-]{1,80}$/), includeNotes: z.boolean() }).strip(),
+  dismissed: z.record(z.string(), z.number()),
+} as const;
+
+function cleanKv(rows: unknown[]) {
+  return rows.flatMap((r) => {
+    if (!isObj(r) || !isStr(r.key) || !(r.key in KV_SCHEMAS)) return [];
+    const parsed = KV_SCHEMAS[r.key as keyof typeof KV_SCHEMAS].safeParse(r.value);
+    return parsed.success ? [{ key: r.key, value: parsed.data }] : [];
+  });
+}
 
 // Limits for files picked by the user: guard against corrupt or crafted archives.
 const MAX_FILE_BYTES = 1024 * 1024 * 1024;
@@ -24,9 +42,47 @@ function safeParse(text: string): unknown {
   );
 }
 
-function declaredSize(entry: JSZip.JSZipObject): number | undefined {
-  // JSZip exposes the central-directory size only on this internal field.
-  return (entry as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize;
+function declaredSize(entry: JSZip.JSZipObject): number {
+  // JSZip exposes the central-directory size only on this internal field; fail closed if it's missing.
+  return (entry as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize ?? Infinity;
+}
+
+interface JSZipStream {
+  on(event: 'data', cb: (chunk: Uint8Array) => void): JSZipStream;
+  on(event: 'error', cb: (e: Error) => void): JSZipStream;
+  on(event: 'end', cb: () => void): JSZipStream;
+  pause(): JSZipStream;
+  resume(): JSZipStream;
+}
+
+/** Decompress one entry while counting the bytes actually produced (headers can lie). */
+function readCapped(entry: JSZip.JSZipObject, cap: number, budget: { left: number }): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const chunks: Uint8Array[] = [];
+    let seen = 0;
+    // `internalStream` exists at runtime but is missing from JSZip's type definitions.
+    const stream = (entry as unknown as { internalStream(type: 'uint8array'): JSZipStream }).internalStream('uint8array');
+    stream
+      .on('data', (c: Uint8Array) => {
+        seen += c.length;
+        budget.left -= c.length;
+        if (seen > cap || budget.left < 0) {
+          stream.pause();
+          reject(new BackupError('حجم بازشدهٔ فایل بیش از حد بزرگ است.'));
+        } else chunks.push(c);
+      })
+      .on('error', (e: Error) => reject(e))
+      .on('end', () => {
+        const out = new Uint8Array(seen);
+        let o = 0;
+        for (const c of chunks) {
+          out.set(c, o);
+          o += c.length;
+        }
+        resolve(out);
+      })
+      .resume();
+  });
 }
 
 export interface BackupManifest {
@@ -96,7 +152,8 @@ export async function parseBackup(file: Blob): Promise<ParsedBackup> {
   if (entries.length > MAX_ENTRIES) throw new BackupError('تعداد فایل‌های داخل پشتیبان غیرعادی است.');
   let total = 0;
   for (const e of entries) {
-    const size = declaredSize(e) ?? 0;
+    if (e.dir) continue;
+    const size = declaredSize(e);
     const limit = e.name.endsWith('.json') ? MAX_JSON_BYTES : MAX_PHOTO_BYTES;
     if (size > limit) throw new BackupError('یکی از بخش‌های فایل بیش از حد بزرگ است.');
     total += size;
@@ -106,15 +163,18 @@ export async function parseBackup(file: Blob): Promise<ParsedBackup> {
   const dataFile = zip.file('data.json');
   if (!manifestFile || !dataFile) throw new BackupError('فایل ناقص است: مشخصات یا داده‌ها پیدا نشد.');
 
+  const budget = { left: MAX_TOTAL_BYTES };
   let manifest: BackupManifest;
   let data: Record<DataTable, unknown[]>;
   let meta: PhotoMeta[] = [];
   try {
-    manifest = safeParse(await manifestFile.async('string')) as BackupManifest;
-    data = safeParse(await dataFile.async('string')) as Record<DataTable, unknown[]>;
+    const text = async (e: JSZip.JSZipObject) => new TextDecoder().decode(await readCapped(e, MAX_JSON_BYTES, budget));
+    manifest = safeParse(await text(manifestFile)) as BackupManifest;
+    data = safeParse(await text(dataFile)) as Record<DataTable, unknown[]>;
     const photosFile = zip.file('photos.json');
-    if (photosFile) meta = safeParse(await photosFile.async('string')) as PhotoMeta[];
-  } catch {
+    if (photosFile) meta = safeParse(await text(photosFile)) as PhotoMeta[];
+  } catch (e) {
+    if (e instanceof BackupError) throw e;
     throw new BackupError('محتوای فایل پشتیبان قابل خواندن نیست.');
   }
   if (manifest.format !== BACKUP_FORMAT) throw new BackupError('این فایل پشتیبان «درنگ» نیست.');
@@ -127,7 +187,7 @@ export async function parseBackup(file: Blob): Promise<ParsedBackup> {
   for (const t of DATA_TABLES) {
     if (!Array.isArray(data[t])) throw new BackupError(`بخش «${t}» در فایل وجود ندارد یا معتبر نیست.`);
   }
-  data.kv = data.kv.filter((r) => isObj(r) && typeof r.key === 'string' && ALLOWED_KV.has(r.key) && isObj(r.value));
+  data.kv = cleanKv(data.kv);
   validateRows(data);
 
   const photos: Photo[] = [];
@@ -140,8 +200,8 @@ export async function parseBackup(file: Blob): Promise<ParsedBackup> {
     if (!full || !thumb) throw new BackupError('بعضی از عکس‌ها در فایل پشتیبان نیستند.');
     photos.push({
       ...m,
-      blob: new Blob([await full.async('arraybuffer')], { type: 'image/jpeg' }),
-      thumb: new Blob([await thumb.async('arraybuffer')], { type: 'image/jpeg' }),
+      blob: new Blob([await readCapped(full, MAX_PHOTO_BYTES, budget) as BlobPart], { type: 'image/jpeg' }),
+      thumb: new Blob([await readCapped(thumb, MAX_PHOTO_BYTES, budget) as BlobPart], { type: 'image/jpeg' }),
     });
   }
 
@@ -165,7 +225,7 @@ export async function restoreBackup(parsed: ParsedBackup) {
     for (const t of tables) await t.clear();
     await db.photos.bulkAdd(parsed.photos);
     for (const t of DATA_TABLES) {
-      const rows = t === 'kv' ? parsed.data[t].filter((r) => !PRIVATE_KV.has((r as { key: string }).key)) : parsed.data[t];
+      const rows = t === 'kv' ? cleanKv(parsed.data[t]) : parsed.data[t];
       await db.table(t).bulkAdd(rows);
     }
   });

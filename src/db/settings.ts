@@ -25,7 +25,7 @@ export interface AiSettings {
 export const DEFAULTS = {
   profile: {} as Profile,
   reminder: { enabled: false, hour: 21 } as ReminderSettings,
-  ai: { provider: 'anthropic', model: 'claude-sonnet-5-5', includeNotes: true } as AiSettings,
+  ai: { provider: 'anthropic', model: 'claude-opus-5-5', includeNotes: true } as AiSettings,
   dismissed: {} as Record<string, number>,
 };
 

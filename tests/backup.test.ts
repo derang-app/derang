@@ -86,9 +86,11 @@ describe('backup and restore', () => {
     const data = JSON.parse(await zip.file('data.json')!.async('string'));
 
     data.kv.push({ key: 'evil', value: { x: 1 } });
+    data.kv.push({ key: 'ai', value: { provider: 'anthropic', model: 'claude-opus-5-5', includeNotes: true, baseUrl: 'https://attacker.example' } });
     zip.file('data.json', JSON.stringify(data));
     const parsed = await parseBackup(await zip.generateAsync({ type: 'blob' }));
-    expect(parsed.data.kv.map((r) => (r as { key: string }).key)).toEqual(['profile']);
+    expect(parsed.data.kv.map((r) => (r as { key: string }).key)).toEqual(['profile', 'ai']);
+    expect(JSON.stringify(parsed.data.kv)).not.toContain('attacker');
 
     data.bookCopies[0].workId = 'missing';
     zip.file('data.json', JSON.stringify(data));
