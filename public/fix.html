@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#FFF9F0" />
+    <meta name="robots" content="noindex" />
+    <title>تعمیر به‌روزرسانی درنگ</title>
+    <!--
+      Kept outside the service worker's precache, so it always comes from the network
+      even when a phone is stuck on an old cached version. It removes only the app's
+      own cached files and service worker; books, notes and photos (IndexedDB) stay.
+    -->
+    <style>
+      body {
+        margin: 0;
+        background: #fff9f0;
+        color: #4f4839;
+        font-family: Vazirmatn, Tahoma, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 3rem 1.5rem;
+      }
+      h1 {
+        font-size: 1.125rem;
+        text-align: center;
+        margin: 0 0 2rem;
+      }
+      .card {
+        background: white;
+        border: 1px solid #eee2d3;
+        border-radius: 2rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      p {
+        font-size: 12px;
+        line-height: 1.9;
+        margin: 0 0 0.75rem;
+      }
+      .muted {
+        color: #8e3200;
+        font-size: 11px;
+      }
+      button {
+        width: 100%;
+        background: #8e3200;
+        color: white;
+        border: 0;
+        border-radius: 1rem;
+        padding: 1rem;
+        font: inherit;
+        font-size: 14px;
+        font-weight: bold;
+        box-shadow: 0 20px 25px -5px rgba(142, 50, 0, 0.2);
+      }
+      button:disabled {
+        opacity: 0.6;
+      }
+      pre {
+        direction: ltr;
+        text-align: left;
+        white-space: pre-wrap;
+        font-size: 10px;
+        color: #4f4839;
+        background: #fff9f0;
+        border: 1px solid #eee2d3;
+        border-radius: 1rem;
+        padding: 0.75rem;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>تعمیر به‌روزرسانی درنگ</h1>
+      <div class="card">
+        <p>اگر نسخهٔ تازهٔ درنگ روی گوشی نمی‌آید، این دکمه فایل‌های ذخیره‌شدهٔ خود برنامه را پاک می‌کند تا آخرین نسخه دوباره دانلود شود.</p>
+        <p class="muted">کتاب‌ها، یادداشت‌ها، جلسه‌ها و عکس‌هایت پاک نمی‌شوند.</p>
+        <button id="go" type="button">دریافت دوبارهٔ نسخهٔ تازه</button>
+      </div>
+      <div class="card">
+        <p>وضعیت فعلی (اگر مشکل ماند، از این بخش عکس بگیر و بفرست):</p>
+        <pre id="log">در حال بررسی…</pre>
+      </div>
+    </main>
+    <script>
+      const log = document.getElementById('log');
+      const lines = [];
+      const say = (s) => {
+        lines.push(s);
+        log.textContent = lines.join('\n');
+      };
+
+      async function status() {
+        say('online: ' + navigator.onLine);
+        if (!('serviceWorker' in navigator)) return say('service worker: not supported');
+        const regs = await navigator.serviceWorker.getRegistrations();
+        say('registrations: ' + regs.length);
+        for (const r of regs) {
+          say('- scope ' + r.scope);
+          say('  active ' + (r.active ? r.active.state : '-') + ', waiting ' + (r.waiting ? 'yes' : 'no') + ', installing ' + (r.installing ? 'yes' : 'no'));
+        }
+        const keys = 'caches' in window ? await caches.keys() : [];
+        say('caches: ' + (keys.join(', ') || '-'));
+        try {
+          const res = await fetch('./sw.js', { cache: 'no-store' });
+          say('sw.js: HTTP ' + res.status + ', ' + (await res.text()).length + ' bytes');
+        } catch (e) {
+          say('sw.js: ' + e);
+        }
+        // Try a normal update first and report why it fails, if it does.
+        for (const r of regs) {
+          try {
+            await r.update();
+            say('update(): ok');
+          } catch (e) {
+            say('update(): ' + e);
+          }
+        }
+      }
+
+      document.getElementById('go').addEventListener('click', async (e) => {
+        e.currentTarget.disabled = true;
+        try {
+          for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+          if ('caches' in window) for (const k of await caches.keys()) await caches.delete(k);
+          say('done: service worker and app files removed; reopening…');
+          setTimeout(() => location.replace('./'), 1500);
+        } catch (err) {
+          say('error: ' + err);
+          e.currentTarget.disabled = false;
+        }
+      });
+
+      status().catch((e) => say('error: ' + e));
+    </script>
+  </body>
+</html>

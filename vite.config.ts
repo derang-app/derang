@@ -23,7 +23,8 @@ export default defineConfig({
       filename: 'sw.ts',
       registerType: 'autoUpdate',
       injectRegister: false,
-      injectManifest: { globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico,webmanifest}'] },
+      // fix.html stays network-only so it still loads on a phone stuck on an old cached version.
+      injectManifest: { globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico,webmanifest}'], globIgnores: ['fix.html'] },
       manifest: {
         name: 'درنگ',
         short_name: 'درنگ',
