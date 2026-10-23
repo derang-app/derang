@@ -9,7 +9,9 @@ import { useGame } from '../db/queries';
 import type { GameWork } from '../db/types';
 import { useOnline } from '../lib/online';
 import { fa, formatRange } from '../lib/text';
+import { setCoverFromBlob } from '../lib/cover';
 import { BGG_ERROR_TEXT, BGG_SECRET, BggError, fetchBggGame, searchBgg, type BggGame, type BggSearchHit } from '../online/bgg';
+import { COVER_ERROR_TEXT, CoverError, downloadImage } from '../online/covers';
 import { BottomAction, Icon, Loading, PageHeader, PhotoImg, Spinner } from '../ui/kit';
 import { useOverlay } from '../ui/overlay';
 import { NotFound } from './BookDetails';
@@ -48,6 +50,8 @@ export default function BggLookup() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const [useImage, setUseImage] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const run = async <T,>(fn: () => Promise<T>): Promise<T | undefined> => {
     setBusy(true);
@@ -67,6 +71,7 @@ export default function BggLookup() {
     if (g) {
       setGame(g);
       setPicked({});
+      setUseImage(false);
     }
   };
   const search = async (q: string) => {
@@ -119,7 +124,16 @@ export default function BggLookup() {
   const isPicked = (f: Field) => picked[f.key] ?? (!f.manual && f.key !== 'altNames');
 
   const apply = async () => {
-    if (!game) return;
+    if (!game || saving) return;
+    setSaving(true);
+    // The box art is optional and opt-in: my own photo stays the cover unless I tick it.
+    if (useImage && game.image) {
+      try {
+        await setCoverFromBlob('game', data.copy.id, await downloadImage(game.image));
+      } catch (e) {
+        toast(`تصویر BGG ذخیره نشد: ${COVER_ERROR_TEXT[e instanceof CoverError ? e.code : 'bad_response']}`, 'error');
+      }
+    }
     const patch: Partial<GameWork> = {};
     for (const f of fields) if (isPicked(f)) (patch as Record<string, unknown>)[f.key] = f.value;
     await updateGameWork(data.copy.workId, patch, 'online');
@@ -231,9 +245,20 @@ export default function BggLookup() {
                     </a>
                   </div>
                 </div>
-                <p className="text-[10px] text-gray-500 leading-relaxed -mt-3">
-                  عکس نسخهٔ خودت عوض نمی‌شود؛ تصویر BGG فقط برای مقایسه نمایش داده می‌شود.
-                </p>
+                {game.image ? (
+                  <div className="bg-white rounded-[2rem] border border-[#EEE2D3] -mt-3">
+                    <label className="flex items-start gap-3 p-4 cursor-pointer">
+                      <input type="checkbox" checked={useImage} onChange={(e) => setUseImage(e.target.checked)} className="w-5 h-5 accent-[#8E3200] mt-0.5 flex-shrink-0" />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[10px] text-gray-500">جلد این بازی</span>
+                        <span className="block text-sm font-bold">تصویر باکیفیت جعبه از BGG</span>
+                        <span className="block text-[10px] text-[#8E3200] mt-0.5">عکس‌های خودت پاک نمی‌شوند و در صفحهٔ ویرایش می‌مانند.</span>
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-500 leading-relaxed -mt-3">عکس نسخهٔ خودت عوض نمی‌شود؛ BGG برای این بازی تصویر بزرگ ندارد.</p>
+                )}
 
                 {existing && existing.length > 0 && (
                   <div className="bg-[#FFF9F0] border border-[#D7A86E]/40 p-5 rounded-[2rem] space-y-3">
@@ -300,9 +325,10 @@ export default function BggLookup() {
           <button
             type="button"
             onClick={apply}
-            className="w-full bg-[#8E3200] text-white py-5 rounded-[2.5rem] font-bold shadow-xl shadow-[#8E3200]/20 flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+            disabled={saving}
+            className="w-full bg-[#8E3200] text-white py-5 rounded-[2.5rem] font-bold shadow-xl shadow-[#8E3200]/20 flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-60"
           >
-            <Icon name="fa-check" />
+            <Icon name={saving ? 'fa-spinner fa-spin' : 'fa-check'} />
             <span>اتصال به این بازی و ثبت اطلاعات</span>
           </button>
         </BottomAction>

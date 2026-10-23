@@ -201,6 +201,37 @@ ${line('نوع نسخه', copy.edition ? EDITION_LABEL[copy.edition] : undefined
   return save({ kind: 'identify_game', targetType: 'game', targetId: copyId, model: provider.model, prompt: 'شناسایی بازی', text: data.message, data });
 }
 
+// ---------- Cover scan ----------
+
+const CornerPoint = z.object({ x: z.number(), y: z.number() });
+const CoverCorners = z.object({
+  found: z.boolean().describe('آیا جلد کتاب یا روی جعبه به‌طور کامل در عکس دیده می‌شود'),
+  topLeft: CornerPoint.nullable(),
+  topRight: CornerPoint.nullable(),
+  bottomRight: CornerPoint.nullable(),
+  bottomLeft: CornerPoint.nullable(),
+  glare: z.boolean().describe('آیا بازتاب نور یا براقی بخشی از جلد را پوشانده'),
+  advice: z.string().nullable().describe('اگر عکس مشکلی دارد (بازتاب، تاری، بیرون‌زدگی از کادر)، یک جملهٔ کوتاه فارسی برای عکس بهتر'),
+});
+export type CoverCornersData = z.infer<typeof CoverCorners>;
+
+/**
+ * Find the four corners of the cover (or box lid) in a photo, in that image's pixels.
+ * Not stored: it only places the handles, which I can still move.
+ */
+export async function findCoverCorners(image: Blob, width: number, height: number, kind: 'book' | 'game', signal?: AbortSignal) {
+  const provider = await getProvider();
+  const what = kind === 'book' ? 'جلد روی کتاب (فقط رویهٔ جلد، بدون عطف و بدون پس‌زمینه)' : 'روی درِ جعبهٔ بازی (فقط سطح بالای در، بدون دیواره‌های کناری جعبه)';
+  const text = `این عکسی است که کاربر برای ساختن تصویر صاف و تمیز از ${what} گرفته. ابعاد عکس ${width}×${height} پیکسل است (x از چپ به راست، y از بالا به پایین).
+مختصات دقیق چهار گوشهٔ ${what} را به پیکسل همین عکس بده: بالا-چپ، بالا-راست، پایین-راست، پایین-چپ (از دید بیننده، حتی اگر جلد چرخیده باشد گوشه‌ای که بالای متن جلد است «بالا» است).
+لبهٔ واقعی جلد را بگیر، نه سایه یا دست. اگر جلد کامل در عکس نیست، found=false.`;
+  return provider.json(
+    { system: BASE_RULES, parts: [{ type: 'image', mediaType: 'image/jpeg', base64: await blobToBase64(image) }, { type: 'text', text }], maxTokens: 3000 },
+    CoverCorners,
+    signal,
+  );
+}
+
 // ---------- Game picker companion ----------
 
 function describeGame(copy: GameCopy, work?: GameWork) {

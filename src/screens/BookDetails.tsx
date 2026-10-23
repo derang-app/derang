@@ -92,6 +92,7 @@ export default function BookDetails() {
           <Menu
             items={[
               { label: 'ویرایش اطلاعات', icon: 'fa-pen', onClick: () => navigate(`/books/${copy.id}/edit`) },
+              { label: 'جلد باکیفیت', icon: 'fa-crop-simple', onClick: () => navigate(`/cover/book/${copy.id}`) },
               { label: 'شناسایی با هوش مصنوعی', icon: 'fa-wand-magic-sparkles', onClick: () => navigate(`/identify/book/${copy.id}`) },
               { label: 'اثر اصلی و نسخه‌ها', icon: 'fa-book-journal-whills', onClick: () => navigate(`/works/${copy.workId}`) },
               ...(copy.owned && copy.status !== 'read'
@@ -105,13 +106,9 @@ export default function BookDetails() {
 
       <section className="relative pt-24 pb-12 px-6 flex flex-col items-center">
         <div className="absolute top-0 left-0 right-0 h-80 bg-gradient-to-b from-[#D7A86E]/20 to-transparent -z-10" />
-        <PhotoImg
-          id={copy.photoIds[0]}
-          full
-          placeholderIcon="fa-book"
-          alt={copy.title}
-          className="w-48 aspect-[3/4.5] rounded-[2rem] shadow-2xl mb-8 transform -rotate-2"
-        />
+        <button type="button" aria-label="جلد باکیفیت" onClick={() => navigate(`/cover/book/${copy.id}`)} className="mb-8 transform -rotate-2 active:scale-95 transition-transform">
+          <PhotoImg id={copy.photoIds[0]} full placeholderIcon="fa-book" alt={copy.title} className="w-48 aspect-[3/4.5] rounded-[2rem] shadow-2xl" />
+        </button>
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-[#4F4839] leading-snug">{copy.title}</h1>
           {work?.authors.length ? <p className="text-lg text-[#8E3200] font-medium">{work.authors.join('، ')}</p> : null}

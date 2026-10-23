@@ -415,7 +415,7 @@ export function BggSettings() {
           </p>
         </div>
 
-        <ol className="bg-white rounded-[2rem] border border-[#EEE2D3] p-6 space-y-3 text-[12px] leading-relaxed list-decimal pr-10">
+        <ol className="bg-white rounded-[2rem] border border-[#EEE2D3] p-6 space-y-3 text-[12px] leading-relaxed list-[persian] pr-10">
           <li>در BoardGameGeek وارد حساب خودت شو (حساب رایگان کافی است).</li>
           <li>
             به صفحهٔ{' '}

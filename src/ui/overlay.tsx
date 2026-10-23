@@ -55,7 +55,7 @@ if (typeof window !== 'undefined') {
  * Android back (gesture or button) closes the overlay instead of leaving the page:
  * opening adds a history entry, back pops it. Closing in-app removes the entry again.
  */
-function useBackToClose(open: boolean, onClose: () => void) {
+export function useBackToClose(open: boolean, onClose: () => void) {
   const close = useRef(onClose);
   close.current = onClose;
   const entry = useRef<number | undefined>(undefined);

@@ -106,6 +106,8 @@ export interface BggGame {
   altNames: string[];
   year?: number;
   thumbnail?: string;
+  /** Full-size box art. */
+  image?: string;
   minPlayers?: number;
   maxPlayers?: number;
   /** Counts where "Best" got the most votes in the community poll. */
@@ -178,12 +180,14 @@ export function parseThing(doc: Document): BggGame | undefined {
   const weight = num(item.querySelector('statistics ratings averageweight'));
   const weightVotes = Number(attr(item.querySelector('statistics ratings numweights')) ?? 0);
   const thumb = item.querySelector('thumbnail')?.textContent?.trim();
+  const image = item.querySelector('image')?.textContent?.trim();
   return {
     id,
     name,
     altNames: altNames.slice(0, 8),
     year: num(item.querySelector('yearpublished')),
     thumbnail: thumb && /^https:\/\//.test(thumb) ? thumb : undefined,
+    image: image && /^https:\/\//.test(image) ? image : undefined,
     minPlayers: num(item.querySelector('minplayers')),
     maxPlayers: num(item.querySelector('maxplayers')),
     bestPlayers: bestCounts(item),

@@ -16,6 +16,7 @@ import Picker from './screens/Picker';
 import Players from './screens/Players';
 import Settings, { AiSettings, BggSettings, ProfileSettings } from './screens/Settings';
 import BggLookup from './screens/BggLookup';
+import CoverStudio from './screens/CoverStudio';
 import Backup from './screens/Backup';
 import Stats from './screens/Stats';
 import ReadingPath from './screens/ReadingPath';
@@ -116,6 +117,7 @@ export default function App() {
             <Route path="/games/:id/log" element={<LogSession />} />
             <Route path="/games/:id/log/:sessionId" element={<LogSession />} />
             <Route path="/identify/:kind/:id" element={<Identify />} />
+            <Route path="/cover/:kind/:id" element={<CoverStudio />} />
             <Route path="/picker" element={<Picker />} />
             <Route path="/players" element={<Players />} />
             <Route path="/settings" element={<Settings />} />

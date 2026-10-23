@@ -55,6 +55,7 @@ export default function GameDetails() {
           <Menu
             items={[
               { label: 'ویرایش اطلاعات', icon: 'fa-pen', onClick: () => navigate(`/games/${copy.id}/edit`) },
+              { label: 'جلد باکیفیت', icon: 'fa-crop-simple', onClick: () => navigate(`/cover/game/${copy.id}`) },
               { label: 'مشخصات فنی و منشأ داده', icon: 'fa-dice-d20', onClick: () => navigate(`/games/${copy.id}/specs`) },
               { label: 'دریافت مشخصات از BGG', icon: 'fa-cloud-arrow-down', onClick: () => navigate(`/games/${copy.id}/bgg`) },
               { label: 'شناسایی بازی اصلی با AI', icon: 'fa-wand-magic-sparkles', onClick: () => navigate(`/identify/game/${copy.id}`) },
@@ -67,7 +68,9 @@ export default function GameDetails() {
 
       <section className="relative pt-24 pb-12 px-6 flex flex-col items-center">
         <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-[#8E3200]/10 to-transparent -z-10" />
-        <PhotoImg id={copy.photoIds[0]} full placeholderIcon="fa-dice" alt={copy.name} className="w-64 aspect-square rounded-[2.5rem] shadow-2xl mb-8" />
+        <button type="button" aria-label="جلد باکیفیت" onClick={() => navigate(`/cover/game/${copy.id}`)} className="mb-8 active:scale-95 transition-transform">
+          <PhotoImg id={copy.photoIds[0]} full placeholderIcon="fa-dice" alt={copy.name} className="w-64 aspect-square rounded-[2.5rem] shadow-2xl" />
+        </button>
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-[#4F4839] leading-snug">{copy.name}</h1>
           {work?.name && work.name !== copy.name && <p className="text-lg text-[#8E3200] font-medium italic ltr">{work.name}</p>}
