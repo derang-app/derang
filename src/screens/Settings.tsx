@@ -7,6 +7,7 @@ import { wipeAllData } from '../lib/backup';
 import { deletePhotos } from '../lib/images';
 import { enableReminder, disableReminder, reminderSupport } from '../lib/reminder';
 import { useInstallState } from '../lib/install';
+import { formatJalali } from '../lib/date';
 import { fa } from '../lib/text';
 import { BGG_APPLICATIONS_URL, BGG_ERROR_TEXT, BGG_SECRET, BggError, searchBgg } from '../online/bgg';
 import { TextField } from '../ui/fields';
@@ -164,6 +165,9 @@ export default function Settings() {
         </div>
         <div className="mt-12 text-center">
           <p className="text-[10px] text-gray-400 font-bold tracking-widest">درنگ نسخه {fa(__APP_VERSION__)} (آفلاین)</p>
+          <p className="text-[10px] text-gray-400 mt-1">
+            ساخت {formatJalali(__APP_BUILD__.at)} ساعت {new Date(__APP_BUILD__.at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}، <span className="ltr inline-block">{__APP_BUILD__.sha}</span>
+          </p>
         </div>
       </main>
     </div>

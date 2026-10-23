@@ -10,7 +10,11 @@ const site = process.env.DERANG_SITE ?? 'http://localhost:5173';
 
 export default defineConfig({
   base,
-  define: { __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0') },
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0'),
+    // Which deploy is running, so a phone stuck on an old version is easy to spot.
+    __APP_BUILD__: JSON.stringify({ sha: (process.env.GITHUB_SHA ?? 'dev').slice(0, 7), at: Date.now() }),
+  },
   plugins: [
     react(),
     VitePWA({
