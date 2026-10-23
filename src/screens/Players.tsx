@@ -6,7 +6,7 @@ import { relativeDays } from '../lib/date';
 import { fa, matchesQuery } from '../lib/text';
 import { FAMILIARITY, GAME_TAGS } from '../lib/vocab';
 import { TagEditor, TextField } from '../ui/fields';
-import { BackButton, ChipButton, Icon, Loading, PhotoImg } from '../ui/kit';
+import { BackButton, ChipButton, Icon, Loading, PhotoImg, useFlight } from '../ui/kit';
 import { Sheet, useOverlay } from '../ui/overlay';
 import { HiddenInputs, usePhotoImport } from '../ui/PhotoPicker';
 import { useNavigate } from 'react-router-dom';
@@ -141,6 +141,7 @@ function Insight({ stats, players, onPick }: { stats: Map<string, { plays: numbe
 }
 
 function PlayerSheet({ player, groups, onClose }: { player?: Player; groups: string[]; onClose: () => void }) {
+  const flight = useFlight();
   const [name, setName] = useState(player?.name ?? '');
   const [group, setGroup] = useState(player?.group ?? '');
   const [likes, setLikes] = useState(player?.likes ?? []);
@@ -153,7 +154,7 @@ function PlayerSheet({ player, groups, onClose }: { player?: Player; groups: str
   const galleryRef = useRef<HTMLInputElement>(null);
   const { run } = usePhotoImport();
 
-  const save = async () => {
+  const save = flight.wrap(async () => {
     if (!name.trim()) {
       toast('نام را وارد کن.', 'error');
       return;
@@ -161,7 +162,7 @@ function PlayerSheet({ player, groups, onClose }: { player?: Player; groups: str
     if (player?.photoId && player.photoId !== photoId) await deletePhotos([player.photoId]);
     await savePlayer({ id: player?.id, name, group: group.trim() || undefined, likes, dislikes, familiarity: familiarity || undefined, notes: notes.trim() || undefined, photoId });
     onClose();
-  };
+  });
 
   return (
     <Sheet open onClose={onClose} label="هم‌بازی">
@@ -222,7 +223,7 @@ function PlayerSheet({ player, groups, onClose }: { player?: Player; groups: str
               <Icon name="fa-trash-can" />
             </button>
           )}
-          <button type="button" onClick={save} className="flex-1 bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-[#8E3200]/20 min-h-11">
+          <button type="button" onClick={save} disabled={flight.busy} className="flex-1 bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-[#8E3200]/20 min-h-11">
             ذخیره
           </button>
         </div>

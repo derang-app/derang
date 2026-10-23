@@ -6,7 +6,7 @@ import { useBook } from '../db/queries';
 import type { ReadStatus } from '../db/types';
 import { fa, joinNames, parseNum, safeUrl, splitNames } from '../lib/text';
 import { JalaliField, SelectField, TextField } from '../ui/fields';
-import { BottomAction, Loading, PageHeader, PrimaryButton, Stars } from '../ui/kit';
+import { BottomAction, Loading, PageHeader, PrimaryButton, Stars, useFlight } from '../ui/kit';
 import { useOverlay } from '../ui/overlay';
 import { PhotoField } from '../ui/PhotoPicker';
 import { NotFound } from './BookDetails';
@@ -15,6 +15,7 @@ type State = ReadStatus | 'wish';
 
 /** Full edit: "my copy" and "original work" fields kept visibly apart. */
 export default function EditBook() {
+  const flight = useFlight();
   const { id } = useParams();
   const navigate = useNavigate();
   const data = useBook(id);
@@ -55,7 +56,7 @@ export default function EditBook() {
   const { copy } = data;
   const set = (k: string) => (v: string) => setForm({ ...form, [k]: v });
 
-  const save = async () => {
+  const save = flight.wrap(async () => {
     if (!form.title.trim()) {
       toast('عنوان کتاب خالی است.', 'error');
       return;
@@ -86,11 +87,11 @@ export default function EditBook() {
     await deletePhotos(removed);
     toast('تغییرات ذخیره شد');
     navigate(-1);
-  };
+  });
 
   return (
     <div className="pb-32 page-enter">
-      <PageHeader title="ویرایش کتاب" back="close" end={<button type="button" onClick={save} className="text-[#8E3200] font-bold text-sm px-2 min-h-11">ذخیره</button>} />
+      <PageHeader title="ویرایش کتاب" back="close" end={<button type="button" onClick={save} disabled={flight.busy} className="text-[#8E3200] font-bold text-sm px-2 min-h-11">ذخیره</button>} />
       <main className="px-6 pt-4 space-y-10">
         <PhotoField photoIds={photoIds} onChange={setPhotoIds} hint="اولین عکس به‌عنوان جلد نمایش داده می‌شود" />
 
@@ -139,7 +140,7 @@ export default function EditBook() {
         </section>
       </main>
       <BottomAction>
-        <PrimaryButton icon="fa-check" onClick={save}>
+        <PrimaryButton icon="fa-check" onClick={save} disabled={flight.busy}>
           ذخیرهٔ تغییرات
         </PrimaryButton>
       </BottomAction>

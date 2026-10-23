@@ -3,7 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { authorsOf, bookTitle, useBooks, useGames, useSessions } from '../db/queries';
 import type { ReadStatus } from '../db/types';
 import { formatRange, fa, matchesQuery } from '../lib/text';
-import { BottomNav } from '../ui/BottomNav';
 import { cx, Icon, Loading, PhotoImg } from '../ui/kit';
 import { Sheet } from '../ui/overlay';
 import { complexityLabel, EDITION_LABEL } from '../lib/vocab';
@@ -219,7 +218,6 @@ export default function Collection({ kind }: { kind: 'books' | 'games' }) {
         </div>
       </Sheet>
 
-      <BottomNav addTo={addTo} />
     </div>
   );
 }

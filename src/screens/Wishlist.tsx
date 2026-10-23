@@ -25,7 +25,7 @@ export default function Wishlist() {
   const wishGames = games.filter((g) => !g.copy.owned);
 
   return (
-    <div className="pb-40 page-enter">
+    <div className="pb-[calc(11rem+env(safe-area-inset-bottom))] page-enter">
       <header className="px-6 pt-8 pb-6 sticky top-0 bg-[#FFF9F0]/80 backdrop-blur-lg z-20">
         <PageHeader title="لیست آرزوها" className="!p-0 !static !bg-transparent mb-6" />
         <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2">

@@ -9,9 +9,8 @@ import { enableReminder, disableReminder, reminderSupport } from '../lib/reminde
 import { useInstallState } from '../lib/install';
 import { fa } from '../lib/text';
 import { BGG_APPLICATIONS_URL, BGG_ERROR_TEXT, BGG_SECRET, BggError, searchBgg } from '../online/bgg';
-import { BottomNav } from '../ui/BottomNav';
 import { TextField } from '../ui/fields';
-import { cx, Icon, Loading, PageHeader, PhotoImg, PrimaryButton, Toggle } from '../ui/kit';
+import { cx, Icon, Loading, PageHeader, PhotoImg, PrimaryButton, Toggle, useFlight } from '../ui/kit';
 import { useOverlay } from '../ui/overlay';
 import { HiddenInputs, usePhotoImport } from '../ui/PhotoPicker';
 
@@ -167,7 +166,6 @@ export default function Settings() {
           <p className="text-[10px] text-gray-400 font-bold tracking-widest">درنگ نسخه {fa(__APP_VERSION__)} (آفلاین)</p>
         </div>
       </main>
-      <BottomNav />
     </div>
   );
 }
@@ -233,6 +231,7 @@ function StorageInfo() {
 }
 
 export function ProfileSettings() {
+  const flight = useFlight();
   const navigate = useNavigate();
   const profile = useSetting('profile');
   const { toast } = useOverlay();
@@ -242,11 +241,11 @@ export function ProfileSettings() {
   const galleryRef = useRef<HTMLInputElement>(null);
   const { run, busy } = usePhotoImport();
   if (!profile) return <Loading />;
-  const save = async () => {
+  const save = flight.wrap(async () => {
     await setSetting('profile', { name: (name ?? profile.name ?? '').trim() || undefined, bio: (bio ?? profile.bio ?? '').trim() || undefined });
     toast('ذخیره شد');
     navigate(-1);
-  };
+  });
   const setPhoto = async (files: FileList | null) => {
     const [id] = await run(files);
     if (!id) return;
@@ -273,7 +272,7 @@ export function ProfileSettings() {
         <TextField label="نام" value={name ?? profile.name ?? ''} onChange={setName} placeholder="برای سلام صفحهٔ خانه" />
         <TextField label="یک خط دربارهٔ خودت" value={bio ?? profile.bio ?? ''} onChange={setBio} placeholder="علاقه به کتاب‌های کلاسیک و بردگیم‌های استراتژیک" />
         <p className="text-[11px] text-gray-500 leading-relaxed">پروفایل فقط روی همین گوشی و در فایل پشتیبان نگه‌داری می‌شود. حساب کاربری یا سروری در کار نیست.</p>
-        <PrimaryButton icon="fa-check" onClick={save}>
+        <PrimaryButton icon="fa-check" onClick={save} disabled={flight.busy}>
           ذخیره
         </PrimaryButton>
       </main>
@@ -282,6 +281,7 @@ export function ProfileSettings() {
 }
 
 export function AiSettings() {
+  const flight = useFlight();
   const ai = useSetting('ai');
   const keyHint = useApiKeyHint('anthropic');
   const { toast, confirm } = useOverlay();
@@ -290,7 +290,7 @@ export function AiSettings() {
   const [baseUrl, setBaseUrl] = useState<string>();
   if (!ai || keyHint === undefined) return <Loading />;
 
-  const save = async () => {
+  const save = flight.wrap(async () => {
     const url = (baseUrl ?? ai.baseUrl ?? '').trim();
     if (url) {
       try {
@@ -309,7 +309,7 @@ export function AiSettings() {
     if (key.trim()) await saveApiKey('anthropic', key);
     setKey('');
     toast('ذخیره شد');
-  };
+  });
 
   return (
     <div className="pb-12 page-enter">
@@ -352,7 +352,7 @@ export function AiSettings() {
           placeholder="https://..."
           hint="فقط اگر از یک گیت‌وی سازگار با API کلود استفاده می‌کنی. خالی = اتصال مستقیم. کلیدت به همین آدرس فرستاده می‌شود؛ فقط آدرس مورد اعتماد وارد کن."
         />
-        <PrimaryButton icon="fa-check" onClick={save}>
+        <PrimaryButton icon="fa-check" onClick={save} disabled={flight.busy}>
           ذخیره
         </PrimaryButton>
         {keyHint && (

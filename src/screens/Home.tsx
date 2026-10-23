@@ -6,7 +6,6 @@ import { useSetting } from '../db/settings';
 import { DAY, relativeDays } from '../lib/date';
 import { readingBars, pagesRead, periodStart } from '../lib/stats';
 import { fa, percent } from '../lib/text';
-import { BottomNav } from '../ui/BottomNav';
 import { cx, Icon, Loading, PhotoImg, ProgressBar } from '../ui/kit';
 import type { BookView } from '../db/books';
 import type { GameView } from '../db/games';
@@ -219,7 +218,6 @@ export default function Home() {
           </section>
         )}
       </main>
-      <BottomNav />
     </div>
   );
 }
@@ -367,7 +365,6 @@ function EmptyHome() {
           <span>تمام داده‌های تو به صورت آفلاین در گوشی می‌ماند</span>
         </div>
       </main>
-      <BottomNav />
     </div>
   );
 }

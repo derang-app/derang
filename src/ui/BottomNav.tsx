@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cx, Icon } from './kit';
 
 const TABS = [
@@ -9,13 +9,28 @@ const TABS = [
   { to: '/settings', icon: 'fa-gear', label: 'تنظیمات' },
 ] as const;
 
-/** Bottom navigation from the Home design: four tabs around a floating «+». */
-export function BottomNav({ addTo = '/add' }: { addTo?: string }) {
+const TAB_PATHS = new Set(['/', '/books', '/games', '/settings']);
+
+/** «+» target for the current tab: books/games add their own kind, the wishlist filter adds a wish. */
+function addTarget(pathname: string, params: URLSearchParams) {
+  if (pathname === '/books') return `/add?type=book${params.get('status') === 'wish' ? '&wish=1' : ''}`;
+  if (pathname === '/games') return `/add?type=game${params.get('filter') === 'wish' ? '&wish=1' : ''}`;
+  return '/add';
+}
+
+/**
+ * Bottom navigation from the Home design: four tabs around a floating «+».
+ * Rendered once by the app shell (not per page), so switching tabs never remounts or animates it.
+ */
+export function BottomNav() {
   const navigate = useNavigate();
+  const { pathname, search } = useLocation();
+  if (!TAB_PATHS.has(pathname)) return null;
+  const addTo = addTarget(pathname, new URLSearchParams(search));
   return (
     <nav
       aria-label="ناوبری اصلی"
-      className="fixed bottom-0 inset-x-app bg-white border-t border-[#EEE2D3] px-8 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex justify-between items-center z-30 rounded-t-[2rem] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]"
+      className="hide-on-keyboard fixed bottom-0 inset-x-app bg-white border-t border-[#EEE2D3] px-8 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex justify-between items-center z-30 rounded-t-[2rem] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]"
     >
       {TABS.map((tab) =>
         tab === null ? (

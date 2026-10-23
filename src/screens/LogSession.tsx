@@ -9,12 +9,13 @@ import { ME, type MyResult } from '../db/types';
 import { relativeDays, startOfDay } from '../lib/date';
 import { fa, parseNum } from '../lib/text';
 import { JalaliField } from '../ui/fields';
-import { BackButton, BottomAction, cx, Icon, Loading, PhotoImg, PrimaryButton } from '../ui/kit';
+import { BackButton, BottomAction, cx, Icon, Loading, PhotoImg, PrimaryButton, useFlight } from '../ui/kit';
 import { Sheet, useOverlay } from '../ui/overlay';
 import { NotFound } from './BookDetails';
 
 /** LogSession design; also used to edit an existing session. */
 export default function LogSession() {
+  const flight = useFlight();
   const { id, sessionId } = useParams();
   const navigate = useNavigate();
   const data = useGame(id);
@@ -63,7 +64,7 @@ export default function LogSession() {
   };
   const toggleWinner = (pid: string) => setWinners(winners.includes(pid) ? winners.filter((w) => w !== pid) : [...winners, pid]);
 
-  const save = async () => {
+  const save = flight.wrap(async () => {
     if (!at) {
       toast('تاریخ بازی معتبر نیست.', 'error');
       return;
@@ -74,7 +75,7 @@ export default function LogSession() {
     );
     toast('جلسه ثبت شد');
     navigate(-1);
-  };
+  });
 
   return (
     <div className="pb-32 page-enter">
@@ -84,7 +85,7 @@ export default function LogSession() {
           <h1 className="text-lg font-bold text-[#4F4839]">{sessionId ? 'ویرایش جلسه' : 'ثبت جلسه بازی'}</h1>
           <p className="text-[10px] text-[#8E3200] font-bold">{copy.name}</p>
         </div>
-        <button type="button" onClick={save} className="text-[#8E3200] font-bold text-sm px-2 min-h-11">
+        <button type="button" onClick={save} disabled={flight.busy} className="text-[#8E3200] font-bold text-sm px-2 min-h-11">
           ذخیره
         </button>
       </header>
@@ -195,7 +196,7 @@ export default function LogSession() {
       </main>
 
       <BottomAction>
-        <PrimaryButton icon="fa-floppy-disk" onClick={save}>
+        <PrimaryButton icon="fa-floppy-disk" onClick={save} disabled={flight.busy}>
           ثبت نهایی جلسه بازی
         </PrimaryButton>
       </BottomAction>
@@ -205,13 +206,14 @@ export default function LogSession() {
         <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="نام" className="input-field mb-6" aria-label="نام" />
         <button
           type="button"
-          onClick={async () => {
+          onClick={flight.wrap(async () => {
             if (!newName.trim()) return;
             const p = await savePlayer({ name: newName });
             setPresent([...present, p.id]);
             setNewName('');
             setNewPlayer(false);
-          }}
+          })}
+          disabled={flight.busy}
           className="w-full bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm min-h-11"
         >
           افزودن و انتخاب

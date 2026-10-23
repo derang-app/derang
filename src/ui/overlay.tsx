@@ -15,11 +15,13 @@ export function Sheet({
   label: string;
 }) {
   useEscape(open, onClose);
+  useBackToClose(open, onClose);
+  useScrollLock(open);
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-50 flex flex-col justify-end animate-fade-in" role="dialog" aria-modal="true" aria-label={label}>
       <button type="button" aria-label="بستن" className="absolute inset-0 bg-[#433520]/80" onClick={onClose} />
-      <div className="relative reflection-card w-full max-w-[480px] mx-auto animate-slide-up max-h-[92vh] overflow-y-auto pb-[max(2rem,env(safe-area-inset-bottom))]">
+      <div className="relative reflection-card w-full max-w-[480px] mx-auto animate-slide-up max-h-[92vh] overflow-y-auto overscroll-contain pb-[max(2rem,env(safe-area-inset-bottom))]">
         <div className="w-16 h-1 bg-[#EEE2D3] rounded-full mx-auto mb-6 -mt-4" />
         {children}
       </div>
@@ -35,6 +37,71 @@ function useEscape(open: boolean, onClose: () => void) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+}
+
+let overlayIds = 0;
+const openOverlays = new Set<number>();
+
+// An overlay entry can be left behind when an action navigates while it closes (e.g. a menu item).
+// Landing on such an entry later would make one back press do nothing, so skip past it.
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', () => {
+    const id = window.history.state?.overlay;
+    if (id !== undefined && !openOverlays.has(id)) window.history.back();
+  });
+}
+
+/**
+ * Android back (gesture or button) closes the overlay instead of leaving the page:
+ * opening adds a history entry, back pops it. Closing in-app removes the entry again.
+ */
+function useBackToClose(open: boolean, onClose: () => void) {
+  const close = useRef(onClose);
+  close.current = onClose;
+  const entry = useRef<number | undefined>(undefined);
+  const active = useRef(false);
+  useEffect(() => {
+    if (!open) return;
+    active.current = true;
+    // Reuse the entry if this is the same overlay re-running its effect (React StrictMode).
+    if (entry.current === undefined || window.history.state?.overlay !== entry.current) {
+      entry.current = ++overlayIds;
+      window.history.pushState({ ...window.history.state, overlay: entry.current }, '');
+    }
+    const id = entry.current;
+    openOverlays.add(id);
+    const onPop = () => {
+      if (window.history.state?.overlay !== id) {
+        openOverlays.delete(id);
+        close.current();
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => {
+      active.current = false;
+      window.removeEventListener('popstate', onPop);
+      setTimeout(() => {
+        if (active.current) return;
+        openOverlays.delete(id);
+        entry.current = undefined;
+        // Closed in-app (not by back): drop our entry, unless something else was pushed on top.
+        if (window.history.state?.overlay === id) window.history.back();
+      }, 0);
+    };
+  }, [open]);
+}
+
+let scrollLocks = 0;
+
+/** Keep the page behind a sheet from scrolling. */
+function useScrollLock(open: boolean) {
+  useEffect(() => {
+    if (!open) return;
+    if (scrollLocks++ === 0) document.body.style.overflow = 'hidden';
+    return () => {
+      if (--scrollLocks === 0) document.body.style.overflow = '';
+    };
+  }, [open]);
 }
 
 type Tone = 'danger' | 'success' | 'warn' | 'info';
@@ -78,6 +145,8 @@ function DialogView({ spec, onResult }: { spec: DialogSpec; onResult: (ok: boole
     confirmRef.current?.focus();
   }, []);
   useEscape(true, () => onResult(false));
+  useBackToClose(true, () => onResult(false));
+  useScrollLock(true);
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-8 animate-fade-in" role="alertdialog" aria-modal="true" aria-label={spec.title}>
       <div className="absolute inset-0 bg-[#433520]/60" onClick={() => onResult(false)} />
@@ -190,6 +259,8 @@ export function Menu({
   buttonClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const hide = useCallback(() => setOpen(false), []);
+  useBackToClose(open, hide);
   return (
     <div className={cx('relative', className)}>
       <button

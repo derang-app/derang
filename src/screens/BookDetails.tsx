@@ -11,7 +11,7 @@ import type { BookCopy, BookWork, MatchStatus, Note, NoteKind, Provenance } from
 import { formatJalali, relativeDays } from '../lib/date';
 import { fa, parseNum, percent, safeUrl } from '../lib/text';
 import { READING_MOODS, STATUS_LABEL } from '../lib/vocab';
-import { AiBanner, BackButton, cx, Icon, Loading, PhotoImg, ProgressBar, Stars } from '../ui/kit';
+import { AiBanner, BackButton, cx, Icon, Loading, PhotoImg, ProgressBar, Stars, useFlight } from '../ui/kit';
 import { Menu, Sheet, useOverlay } from '../ui/overlay';
 
 type Tab = 'notes' | 'work' | 'copy' | 'quotes';
@@ -76,7 +76,7 @@ export default function BookDetails() {
   const shownNotes = notes.filter((n) => n.kind === (tab === 'quotes' ? 'quote' : 'note'));
 
   return (
-    <div className="pb-36 page-enter">
+    <div className="pb-[calc(11rem+env(safe-area-inset-bottom))] page-enter">
       <header className="fixed top-0 inset-x-app z-30 px-6 py-6 flex justify-between items-center">
         <BackButton kind="chevron" glass />
         <div className="flex gap-3">
@@ -355,6 +355,7 @@ function StatusCard({
 }
 
 function ProgressSheet({ open, onClose, copy, onFinished }: { open: boolean; onClose: () => void; copy: BookCopy; onFinished: () => void }) {
+  const flight = useFlight();
   const [page, setPage] = useState('');
   const [total, setTotal] = useState('');
   useEffect(() => {
@@ -363,7 +364,7 @@ function ProgressSheet({ open, onClose, copy, onFinished }: { open: boolean; onC
       setTotal(copy.pageCount ? String(copy.pageCount) : '');
     }
   }, [open, copy.currentPage, copy.pageCount]);
-  const save = async () => {
+  const save = flight.wrap(async () => {
     const n = parseNum(page);
     const t = parseNum(total);
     if (t && t !== copy.pageCount) await updateCopy(copy.id, { pageCount: Math.round(t) });
@@ -371,7 +372,7 @@ function ProgressSheet({ open, onClose, copy, onFinished }: { open: boolean; onC
     if (n === undefined) return;
     const done = await setProgress(copy.id, Math.round(n));
     if (done) onFinished();
-  };
+  });
   return (
     <Sheet open={open} onClose={onClose} label="ثبت پیشرفت">
       <h2 className="text-xl font-bold text-center mb-2">ثبت پیشرفت</h2>
@@ -395,19 +396,28 @@ function ProgressSheet({ open, onClose, copy, onFinished }: { open: boolean; onC
 
 /** EndBookReflection design: rating, a short note, moods. Skippable. */
 function ReflectionSheet({ open, onClose, copy }: { open: boolean; onClose: () => void; copy: BookCopy }) {
+  const flight = useFlight();
   const [rating, setRating] = useState<number | undefined>(copy.rating);
   const [text, setText] = useState('');
   const [moods, setMoods] = useState<string[]>([]);
   const [companion, setCompanion] = useState(false);
   const { toast } = useOverlay();
-  const finish = async (skipped: boolean) => {
+  // Start fresh each time it opens; the stars may have changed on the status card meanwhile.
+  useEffect(() => {
+    if (open) {
+      setRating(copy.rating);
+      setText('');
+      setMoods([]);
+    }
+  }, [open, copy.rating]);
+  const finish = flight.wrap(async (skipped: boolean) => {
     await finishReading(copy.id, {
       rating: skipped ? copy.rating : rating,
       reflection: skipped ? { skipped: true, moods: [] } : { skipped: false, text: text.trim() || undefined, moods },
     });
     onClose();
     toast(skipped ? 'به‌عنوان خوانده‌شده ثبت شد' : 'برداشتت ثبت شد');
-  };
+  });
   return (
     <Sheet open={open} onClose={onClose} label="پایان مطالعه">
       <div className="flex flex-col items-center text-center space-y-2 mb-10">
@@ -456,10 +466,10 @@ function ReflectionSheet({ open, onClose, copy }: { open: boolean; onClose: () =
           </div>
         </div>
         <div className="flex gap-4 pt-6">
-          <button type="button" onClick={() => finish(true)} className="flex-1 bg-white border border-[#EEE2D3] text-[#8E3200] py-4 rounded-2xl font-bold text-sm active:scale-95 transition-all">
+          <button type="button" onClick={() => finish(true)} disabled={flight.busy} className="flex-1 bg-white border border-[#EEE2D3] text-[#8E3200] py-4 rounded-2xl font-bold text-sm active:scale-95 transition-all">
             رد کردن
           </button>
-          <button type="button" onClick={() => finish(false)} className="flex-[2] bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-[#8E3200]/20 active:scale-95 transition-all">
+          <button type="button" onClick={() => finish(false)} disabled={flight.busy} className="flex-[2] bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-[#8E3200]/20 active:scale-95 transition-all">
             ثبت نهایی و آرشیو
           </button>
         </div>
@@ -470,12 +480,13 @@ function ReflectionSheet({ open, onClose, copy }: { open: boolean; onClose: () =
 }
 
 function NoteSheet({ copyId, kind, note, onClose }: { copyId: string; kind: NoteKind; note?: Note; onClose: () => void }) {
+  const flight = useFlight();
   const [text, setText] = useState(note?.text ?? '');
   const [page, setPage] = useState(note?.page ? String(note.page) : '');
   const [chapter, setChapter] = useState(note?.chapter ?? '');
   const [tags, setTags] = useState(note?.tags.join('، ') ?? '');
   const { confirm } = useOverlay();
-  const save = async () => {
+  const save = flight.wrap(async () => {
     if (!text.trim()) return onClose();
     const values = {
       text: text.trim(),
@@ -489,7 +500,7 @@ function NoteSheet({ copyId, kind, note, onClose }: { copyId: string; kind: Note
     if (note) await updateNote(note.id, values);
     else await addNote({ copyId, kind, ...values });
     onClose();
-  };
+  });
   return (
     <Sheet open onClose={onClose} label={kind === 'quote' ? 'نقل‌قول' : 'یادداشت'}>
       <h2 className="text-xl font-bold text-center mb-6">{note ? 'ویرایش' : kind === 'quote' ? 'نقل‌قول تازه' : 'یادداشت تازه'}</h2>
@@ -533,7 +544,7 @@ function NoteSheet({ copyId, kind, note, onClose }: { copyId: string; kind: Note
               <Icon name="fa-trash-can" />
             </button>
           )}
-          <button type="button" onClick={save} className="flex-1 bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-[#8E3200]/20 min-h-11">
+          <button type="button" onClick={save} disabled={flight.busy} className="flex-1 bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-[#8E3200]/20 min-h-11">
             ذخیره
           </button>
         </div>

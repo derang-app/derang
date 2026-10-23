@@ -7,13 +7,14 @@ import { deletePhotos } from '../lib/images';
 import { fa, formatRange, joinNames, matchesQuery, parseList, parseNum, parseRange, splitNames } from '../lib/text';
 import { GAME_TAGS } from '../lib/vocab';
 import { SelectField, TagEditor, TextField } from '../ui/fields';
-import { BottomAction, Icon, Loading, PageHeader, PhotoImg, PrimaryButton, Stars } from '../ui/kit';
+import { BottomAction, Icon, Loading, PageHeader, PhotoImg, PrimaryButton, Stars, useFlight } from '../ui/kit';
 import { Sheet, useOverlay } from '../ui/overlay';
 import { PhotoField } from '../ui/PhotoPicker';
 import { clampComplexity, parseBgg } from './AddEntry';
 import { NotFound } from './BookDetails';
 
 export default function EditGame() {
+  const flight = useFlight();
   const { id } = useParams();
   const navigate = useNavigate();
   const data = useGame(id);
@@ -60,7 +61,7 @@ export default function EditGame() {
   const set = (k: string) => (v: string) => setForm({ ...form, [k]: v });
   const others = games.filter((g) => g.copy.workId !== copy.workId && matchesQuery(query, g.copy.name, g.work?.name, g.work?.altNames));
 
-  const save = async () => {
+  const save = flight.wrap(async () => {
     if (!form.name.trim()) {
       toast('نام بازی خالی است.', 'error');
       return;
@@ -97,11 +98,11 @@ export default function EditGame() {
     await deletePhotos(removed);
     toast('تغییرات ذخیره شد');
     navigate(-1);
-  };
+  });
 
   return (
     <div className="pb-32 page-enter">
-      <PageHeader title="ویرایش بازی" back="close" end={<button type="button" onClick={save} className="text-[#8E3200] font-bold text-sm px-2 min-h-11">ذخیره</button>} />
+      <PageHeader title="ویرایش بازی" back="close" end={<button type="button" onClick={save} disabled={flight.busy} className="text-[#8E3200] font-bold text-sm px-2 min-h-11">ذخیره</button>} />
       <main className="px-6 pt-4 space-y-10">
         <PhotoField photoIds={photoIds} onChange={setPhotoIds} hint="عکس جعبه، دفترچه یا قطعات نسخهٔ خودت" />
 
@@ -179,7 +180,7 @@ export default function EditGame() {
         </section>
       </main>
       <BottomAction>
-        <PrimaryButton icon="fa-check" onClick={save}>
+        <PrimaryButton icon="fa-check" onClick={save} disabled={flight.busy}>
           ذخیرهٔ تغییرات
         </PrimaryButton>
       </BottomAction>

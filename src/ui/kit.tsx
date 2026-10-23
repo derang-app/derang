@@ -1,8 +1,30 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { fa } from '../lib/text';
+
+/** Wraps async handlers so a double tap runs them once; `busy` is true while one runs. */
+export function useFlight() {
+  const running = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const wrap = useCallback(
+    <A extends unknown[]>(fn: (...args: A) => Promise<unknown>) =>
+      async (...args: A) => {
+        if (running.current) return;
+        running.current = true;
+        setBusy(true);
+        try {
+          await fn(...args);
+        } finally {
+          running.current = false;
+          setBusy(false);
+        }
+      },
+    [],
+  );
+  return { wrap, busy };
+}
 
 export function cx(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(' ');
@@ -269,7 +291,7 @@ export function PrimaryButton({
 /** Fixed bottom action area with the design's cream fade. */
 export function BottomAction({ children }: { children: ReactNode }) {
   return (
-    <div className="fixed bottom-0 inset-x-app p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-[#FFF9F0] via-[#FFF9F0] to-transparent z-30">
+    <div className="hide-on-keyboard fixed bottom-0 inset-x-app p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-[#FFF9F0] via-[#FFF9F0] to-transparent z-30">
       {children}
     </div>
   );
@@ -285,12 +307,14 @@ export function Spinner({ className }: { className?: string }) {
   );
 }
 
+/** Placeholder while local data loads; the dots appear only if it takes noticeably long, so quick loads don't flash. */
 export function Loading() {
-  return (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <Spinner />
-    </div>
-  );
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShow(true), 300);
+    return () => clearTimeout(t);
+  }, []);
+  return <div className="min-h-[60vh] flex items-center justify-center">{show && <Spinner />}</div>;
 }
 
 export function ChipButton({
