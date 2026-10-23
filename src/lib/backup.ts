@@ -259,9 +259,6 @@ const SOURCES = ['manual', 'rulebook', 'online', 'ai_unconfirmed', 'ai_confirmed
 const MATCH = ['unidentified', 'suggested', 'confirmed'];
 const optHttp = (v: unknown) => v === undefined || (isStr(v) && /^https?:\/\//i.test(v));
 const AI_KINDS = ['identify_book', 'identify_game', 'reflection_questions', 'creative_idea', 'connections', 'picker_explain', 'wishlist_suggest', 'reading_insight'];
-const isIdentifyData = (v: unknown) =>
-  isObj(v) && oneOf(v.status, ['clear', 'ambiguous', 'insufficient']) && isStr(v.message) && (v.needs === null || isStr(v.needs)) &&
-  Array.isArray(v.candidates) && v.candidates.every((c) => isObj(c) && isStr(c.basis));
 const isProv = (v: unknown) => isObj(v) && Object.values(v).every((s) => oneOf(s, SOURCES));
 
 /** Shape and reference checks for every row, so a bad file can't put broken records into the app. */
@@ -305,6 +302,7 @@ function validateRows(data: Record<DataTable, unknown[]>) {
       oneOf(r.result, ['win', 'loss', 'draw', 'unknown']),
   );
   check('aiResponses', (r) => oneOf(r.kind, AI_KINDS) && isStr(r.text) && isStr(r.model) && isNum(r.createdAt) && optStr(r.targetId) && optStr(r.prompt));
-  // Saved identification results must have the shape the review screen expects; otherwise keep only the text.
-  for (const r of data.aiResponses as Row[]) if (r.data !== undefined && !isIdentifyData(r.data)) delete r.data;
+  // Structured identification results could be written straight into records from the review
+  // screen, so they're never taken from a file; the text stays and identification can be re-run.
+  for (const r of data.aiResponses as Row[]) delete r.data;
 }
