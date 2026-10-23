@@ -26,8 +26,8 @@ export default defineConfig({
         description: 'مدیریت دنج کتاب و بردگیم',
         lang: 'fa',
         dir: 'rtl',
-        // Explicit, unique identity: other apps on the same github.io origin must never be confused with this one.
-        id: `${base}?app=derang`,
+        // Explicit identity, equal to the implicit one earlier installs got (start_url), so existing installs keep updating.
+        id: base,
         start_url: base,
         scope: base,
         related_applications: [{ platform: 'webapp', url: `${site}${base}manifest.webmanifest` }],
