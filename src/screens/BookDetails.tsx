@@ -29,6 +29,7 @@ export default function BookDetails() {
   const [reflectOpen, setReflectOpen] = useState(false);
   const [companionOpen, setCompanionOpen] = useState(false);
   const [noteEdit, setNoteEdit] = useState<{ kind: NoteKind; note?: Note } | null>(null);
+  const [starting, setStarting] = useState(false);
   const notes = useLiveQuery(() => (id ? db.notes.where('copyId').equals(id).reverse().sortBy('createdAt') : []), [id]);
   const lastLog = useLiveQuery(async () => (id ? (await db.readingLogs.where('copyId').equals(id).sortBy('at')).pop() : undefined), [id]);
 
@@ -58,6 +59,19 @@ export default function BookDetails() {
     toast('حذف شد');
     navigate('/books', { replace: true });
   };
+
+  // Flip the card at once; the stored copy catches up when the write lands.
+  const start = async () => {
+    setStarting(true);
+    try {
+      await startReading(copy.id);
+    } catch {
+      toast('ذخیره نشد؛ دوباره امتحان کن.', 'error');
+    } finally {
+      setStarting(false);
+    }
+  };
+  const shownCopy: BookCopy = starting && copy.status !== 'reading' ? { ...copy, status: 'reading', startedAt: copy.startedAt ?? Date.now() } : copy;
 
   const shownNotes = notes.filter((n) => n.kind === (tab === 'quotes' ? 'quote' : 'note'));
 
@@ -129,11 +143,12 @@ export default function BookDetails() {
 
       <section className="px-6 mb-10">
         <StatusCard
-          copy={copy}
+          copy={shownCopy}
           pct={pct}
           lastLogAt={lastLog?.at}
           onProgress={() => setProgressOpen(true)}
           onFinish={() => setReflectOpen(true)}
+          onStart={start}
         />
       </section>
 
@@ -247,12 +262,14 @@ function StatusCard({
   lastLogAt,
   onProgress,
   onFinish,
+  onStart,
 }: {
   copy: BookCopy;
   pct?: number;
   lastLogAt?: number;
   onProgress: () => void;
   onFinish: () => void;
+  onStart: () => void;
 }) {
   const { toast } = useOverlay();
   if (!copy.owned) {
@@ -279,7 +296,7 @@ function StatusCard({
           <h3 className="font-bold">{STATUS_LABEL.unread}</h3>
           <p className="text-xs text-white/70 mt-1">هر وقت آماده بودی شروع کن.</p>
         </div>
-        <button type="button" onClick={() => startReading(copy.id)} className="bg-white text-[#8E3200] px-5 py-3 rounded-xl text-sm font-bold active:scale-95 transition-transform min-h-11">
+        <button type="button" onClick={onStart} className="bg-white text-[#8E3200] px-5 py-3 rounded-xl text-sm font-bold active:scale-95 transition-transform min-h-11">
           شروع مطالعه
         </button>
       </div>
@@ -305,7 +322,7 @@ function StatusCard({
             ))}
           </div>
         ) : null}
-        <button type="button" onClick={() => startReading(copy.id)} className="text-[11px] font-bold text-[#8E3200] min-h-9">
+        <button type="button" onClick={onStart} className="text-[11px] font-bold text-[#8E3200] min-h-9">
           خواندن دوباره
         </button>
       </div>

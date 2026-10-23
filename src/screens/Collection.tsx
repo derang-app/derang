@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { authorsOf, bookTitle, useBooks, useGames, useSessions } from '../db/queries';
 import type { ReadStatus } from '../db/types';
 import { formatRange, fa, matchesQuery } from '../lib/text';
@@ -26,9 +26,8 @@ const GAME_FILTERS: [GameFilter, string][] = [
   ['wish', 'علاقه‌مندی‌ها'],
 ];
 
-/** CollectionList design, shared by the Books and Games tabs. */
+/** CollectionList design, shared by the Books and Games tabs (each reached from the bottom nav). */
 export default function Collection({ kind }: { kind: 'books' | 'games' }) {
-  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const books = useBooks();
   const games = useGames();
@@ -86,7 +85,7 @@ export default function Collection({ kind }: { kind: 'books' | 'games' }) {
     <div className="pb-28 page-enter">
       <header className="px-6 pt-8 pb-4 sticky top-0 bg-[#FFF9F0]/80 backdrop-blur-lg z-20 space-y-4">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-[#4F4839]">مجموعه من</h1>
+          <h1 className="text-2xl font-bold text-[#4F4839]">{kind === 'books' ? `کتاب‌های من (${fa(ownedBooks)})` : `بردگیم‌های من (${fa(ownedGames)})`}</h1>
           <button
             type="button"
             aria-label="مرتب‌سازی"
@@ -106,23 +105,6 @@ export default function Collection({ kind }: { kind: 'books' | 'games' }) {
             className="w-full bg-white border border-[#EEE2D3] rounded-2xl py-3 pr-12 pl-4 text-sm focus:outline-none focus:border-[#8E3200] transition-all"
           />
           <Icon name="fa-magnifying-glass" className="absolute right-4 top-1/2 -translate-y-1/2 text-[#D7A86E]" />
-        </div>
-        <div className="flex border-b border-[#EEE2D3]" role="tablist">
-          {(['books', 'games'] as const).map((k) => (
-            <button
-              key={k}
-              type="button"
-              role="tab"
-              aria-selected={kind === k}
-              onClick={() => navigate(`/${k}`, { replace: true })}
-              className={cx(
-                'flex-1 pb-3 text-sm font-bold',
-                kind === k ? 'text-[#8E3200] border-b-2 border-[#8E3200]' : 'text-gray-500',
-              )}
-            >
-              {k === 'books' ? `کتاب‌ها (${fa(ownedBooks)})` : `بردگیم‌ها (${fa(ownedGames)})`}
-            </button>
-          ))}
         </div>
       </header>
 

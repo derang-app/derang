@@ -27,7 +27,8 @@ export class DerangDB extends Dexie {
   kv!: EntityTable<KV, 'key'>;
 
   constructor(name = 'derang') {
-    super(name);
+    // Relaxed: a write commits without waiting for a disk flush, which can stall for seconds on some Android phones.
+    super(name, { chromeTransactionDurability: 'relaxed' });
     this.version(1).stores({
       bookWorks: 'id, updatedAt',
       bookCopies: 'id, workId, status, owned, updatedAt',

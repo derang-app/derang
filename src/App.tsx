@@ -38,8 +38,8 @@ export default function App() {
         <div className="app-frame">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/books" element={<Collection kind="books" />} />
-            <Route path="/games" element={<Collection kind="games" />} />
+            <Route path="/books" element={<Collection key="books" kind="books" />} />
+            <Route path="/games" element={<Collection key="games" kind="games" />} />
             <Route path="/add" element={<AddEntry />} />
             <Route path="/books/:id" element={<BookDetails />} />
             <Route path="/books/:id/edit" element={<EditBook />} />
