@@ -64,6 +64,8 @@ export function parseXml(text: string): Document {
 }
 
 const attr = (el: Element | null | undefined, name = 'value') => el?.getAttribute(name) ?? undefined;
+/** Remote text: strip control/format characters and bound the length. */
+const clean = (s: string | undefined) => (s ?? '').replace(/[\p{Cc}\p{Cf}]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
 const num = (el: Element | null | undefined) => {
   const v = Number(attr(el));
   return Number.isFinite(v) && v > 0 ? v : undefined;
@@ -79,8 +81,8 @@ export interface BggSearchHit {
 export function parseSearch(doc: Document): BggSearchHit[] {
   return Array.from(doc.querySelectorAll('items > item')).flatMap((item) => {
     const id = item.getAttribute('id');
-    const name = attr(item.querySelector('name[type="primary"]')) ?? attr(item.querySelector('name'));
-    if (!id || !/^\d+$/.test(id) || !name) return [];
+    const name = clean(attr(item.querySelector('name[type="primary"]')) ?? attr(item.querySelector('name')));
+    if (!id || !/^\d{1,9}$/.test(id) || !name) return [];
     return [{ id, name, year: num(item.querySelector('yearpublished')), expansion: item.getAttribute('type') === 'boardgameexpansion' }];
   });
 }
@@ -161,14 +163,14 @@ function bestCounts(item: Element): number[] {
 export function parseThing(doc: Document): BggGame | undefined {
   const item = doc.querySelector('items > item');
   const id = item?.getAttribute('id');
-  if (!item || !id || !/^\d+$/.test(id)) return undefined;
-  const name = attr(item.querySelector('name[type="primary"]')) ?? '';
+  if (!item || !id || !/^\d{1,9}$/.test(id)) return undefined;
+  const name = clean(attr(item.querySelector('name[type="primary"]')));
   const altNames = Array.from(item.querySelectorAll('name[type="alternate"]'))
-    .map((n) => attr(n) ?? '')
+    .map((n) => clean(attr(n)))
     .filter(Boolean);
   // Keep Persian/Arabic-script alternates first; the full list can be long.
   altNames.sort((a, b) => Number(/[؀-ۿ]/.test(b)) - Number(/[؀-ۿ]/.test(a)));
-  const links = (type: string) => Array.from(item.querySelectorAll(`link[type="${type}"]`)).map((l) => attr(l) ?? '');
+  const links = (type: string) => Array.from(item.querySelectorAll(`link[type="${type}"]`)).map((l) => clean(attr(l)));
   const categories = links('boardgamecategory');
   const mechanics = links('boardgamemechanic');
   const families = Array.from(item.querySelectorAll('ranks > rank[type="family"]')).map((r) => r.getAttribute('name') ?? '');
@@ -199,6 +201,6 @@ export function parseThing(doc: Document): BggGame | undefined {
 export async function fetchBggGame(id: string, signal?: AbortSignal): Promise<BggGame> {
   if (!/^\d{1,9}$/.test(id)) throw new BggError('not_found');
   const game = parseThing(await getXml(`/thing?id=${id}&stats=1`, signal));
-  if (!game) throw new BggError('not_found');
+  if (!game || game.id !== id) throw new BggError('not_found');
   return game;
 }

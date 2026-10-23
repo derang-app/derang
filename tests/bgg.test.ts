@@ -76,3 +76,13 @@ describe('BoardGameGeek parsing', () => {
     expect(parseThing(parseXml('<items termsofuse="x"></items>'))).toBeUndefined();
   });
 });
+
+describe('BoardGameGeek input hygiene', () => {
+  it('strips control characters, bounds names and rejects oversized ids', () => {
+    const doc = parseXml(THING.replace('value="Ticket to Ride: Europe"', `value="Ticket‮ to Ride ${'x'.repeat(300)}"`));
+    const g = parseThing(doc)!;
+    expect(g.name).not.toContain('‮');
+    expect(g.name.length).toBeLessThanOrEqual(200);
+    expect(parseThing(parseXml(THING.replace('id="14996"', 'id="12345678901"')))).toBeUndefined();
+  });
+});

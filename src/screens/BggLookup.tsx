@@ -115,7 +115,8 @@ export default function BggLookup() {
 
   if (data === undefined || token === undefined) return <Loading />;
   if (data === null) return <NotFound />;
-  const isPicked = (f: Field) => picked[f.key] ?? !f.manual;
+  // Alternate names are free text from BGG, so they're opt-in.
+  const isPicked = (f: Field) => picked[f.key] ?? (!f.manual && f.key !== 'altNames');
 
   const apply = async () => {
     if (!game) return;
