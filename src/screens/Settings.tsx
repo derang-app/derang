@@ -7,6 +7,7 @@ import { wipeAllData } from '../lib/backup';
 import { deletePhotos } from '../lib/images';
 import { enableReminder, disableReminder, reminderSupport } from '../lib/reminder';
 import { fa } from '../lib/text';
+import { BGG_APPLICATIONS_URL, BGG_ERROR_TEXT, BGG_SECRET, BggError, searchBgg } from '../online/bgg';
 import { BottomNav } from '../ui/BottomNav';
 import { TextField } from '../ui/fields';
 import { cx, Icon, Loading, PageHeader, PhotoImg, PrimaryButton, Toggle } from '../ui/kit';
@@ -19,8 +20,9 @@ export default function Settings() {
   const reminder = useSetting('reminder');
   const ai = useSetting('ai');
   const keyHint = useApiKeyHint('anthropic');
+  const bggHint = useApiKeyHint(BGG_SECRET);
   const { confirm, toast } = useOverlay();
-  if (!profile || !reminder || !ai || keyHint === undefined) return <Loading />;
+  if (!profile || !reminder || !ai || keyHint === undefined || bggHint === undefined) return <Loading />;
 
   const toggleReminder = async (on: boolean) => {
     if (!on) {
@@ -105,6 +107,19 @@ export default function Settings() {
           <Group title="پشتیبان‌گیری و داده‌ها">
             <Item icon="fa-file-zipper" label="پشتیبان‌گیری و بازیابی" to="/settings/backup" tone="tan" />
             <StorageInfo />
+          </Group>
+
+          <Group title="منابع آنلاین">
+            <Link to="/settings/bgg" className={cx('settings-item', !bggHint && 'border-dashed border-[#8E3200]/40 bg-[#FFF9F0]')}>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#4F4839] text-white text-[10px] font-bold">BGG</div>
+                <div>
+                  <span className="text-sm font-bold block">اتصال BoardGameGeek</span>
+                  <span className="text-[10px] text-[#8E3200]/80 font-medium">{bggHint ? `وضعیت: تنظیم‌شده (…${bggHint})` : 'وضعیت: نیازمند تنظیم'}</span>
+                </div>
+              </div>
+              <Icon name="fa-chevron-left" className="text-[10px] text-gray-400" />
+            </Link>
           </Group>
 
           <Group title="هوش مصنوعی">
@@ -364,4 +379,100 @@ function SavedAnswersCount() {
   }, []);
   if (!count) return null;
   return <p className="text-[11px] text-center text-gray-500">{fa(count)} پاسخ هوش مصنوعی روی گوشی ذخیره شده و آفلاین قابل مشاهده است.</p>;
+}
+
+export function BggSettings() {
+  const hint = useApiKeyHint(BGG_SECRET);
+  const { toast, confirm } = useOverlay();
+  const [token, setToken] = useState('');
+  const [testing, setTesting] = useState(false);
+  if (hint === undefined) return <Loading />;
+
+  const test = async () => {
+    setTesting(true);
+    try {
+      const hits = await searchBgg('Azul');
+      toast(hits.length ? 'اتصال به BGG برقرار است' : 'اتصال برقرار شد، اما نتیجه‌ای برنگشت');
+    } catch (e) {
+      toast(e instanceof BggError ? BGG_ERROR_TEXT[e.code] : BGG_ERROR_TEXT.bad_response, 'error');
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="pb-12 page-enter">
+      <PageHeader title="اتصال BoardGameGeek" />
+      <main className="px-6 space-y-8 mt-4">
+        <div className={cx('state-card', !hint && 'border-dashed border-[#8E3200]/40')}>
+          <div className="w-16 h-16 bg-[#4F4839] text-white rounded-2xl flex items-center justify-center mx-auto mb-4 font-bold">BGG</div>
+          <h2 className="text-sm font-bold">{hint ? `توکن تنظیم شده است (…${hint})` : 'نیازمند تنظیم'}</h2>
+          <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+            با این اتصال می‌توانی بازی اصلی را در BGG پیدا کنی و تعداد بازیکن، زمان، پیچیدگی، تعداد پیشنهادی جامعه و سبک را با بررسی خودت ثبت کنی. توکن رمزنگاری‌شده فقط روی همین گوشی است و در پشتیبان قرار نمی‌گیرد.
+          </p>
+        </div>
+
+        <ol className="bg-white rounded-[2rem] border border-[#EEE2D3] p-6 space-y-3 text-[12px] leading-relaxed list-decimal pr-10">
+          <li>در BoardGameGeek وارد حساب خودت شو (حساب رایگان کافی است).</li>
+          <li>
+            به صفحهٔ{' '}
+            <a href={BGG_APPLICATIONS_URL} target="_blank" rel="noreferrer noopener" className="font-bold text-[#8E3200] underline">
+              Applications
+            </a>{' '}
+            برو و یک برنامهٔ جدید با مجوز غیرتجاری (non-commercial) بساز؛ مثلاً با نام Derang و توضیح «اپ شخصی مدیریت مجموعه».
+          </li>
+          <li>تأیید BGG ممکن است چند روز تا یک هفته طول بکشد.</li>
+          <li>پس از تأیید، در همان صفحه بخش Tokens یک توکن بساز و اینجا وارد کن.</li>
+        </ol>
+
+        <div className="space-y-2">
+          <label htmlFor="bgg-token" className="field-label block">
+            {hint ? 'توکن جدید (برای تعویض)' : 'توکن BGG'}
+          </label>
+          <input
+            id="bgg-token"
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            dir="ltr"
+            className="input-field text-left"
+          />
+        </div>
+        <PrimaryButton
+          icon="fa-check"
+          onClick={async () => {
+            if (!token.trim()) return;
+            await saveApiKey(BGG_SECRET, token);
+            setToken('');
+            toast('توکن ذخیره شد');
+          }}
+        >
+          ذخیره
+        </PrimaryButton>
+        {hint && (
+          <>
+            <button type="button" onClick={test} disabled={testing} className="w-full bg-white border border-[#EEE2D3] py-4 rounded-2xl text-sm font-bold min-h-11 disabled:opacity-60">
+              {testing ? 'در حال آزمایش...' : 'آزمایش اتصال'}
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (await confirm({ tone: 'danger', title: 'حذف توکن؟', message: 'جستجو در BGG تا تنظیم دوباره غیرفعال می‌شود. اطلاعات ثبت‌شده باقی می‌ماند.', confirm: 'حذف', cancel: 'انصراف' })) {
+                  await clearApiKey(BGG_SECRET);
+                }
+              }}
+              className="w-full py-4 text-red-600 font-bold text-sm bg-red-50 rounded-2xl border border-red-100"
+            >
+              حذف توکن از این گوشی
+            </button>
+          </>
+        )}
+        <p className="text-[10px] text-center text-gray-400">
+          Powered by BoardGameGeek. هر درخواست با فاصلهٔ حداقل دو ثانیه فرستاده می‌شود.
+        </p>
+      </main>
+    </div>
+  );
 }

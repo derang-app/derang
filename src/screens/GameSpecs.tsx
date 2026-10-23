@@ -112,11 +112,14 @@ export default function GameSpecs() {
               </div>
               <Icon name="fa-arrow-up-right-from-square" className="text-[11px] text-[#8E3200]" />
             </a>
-          ) : (
-            <button type="button" onClick={() => navigate(`/games/${copy.id}/edit`)} className="w-full py-4 border-2 border-dashed border-[#D7A86E]/40 rounded-3xl text-[#8E3200] text-xs font-bold min-h-11">
-              + افزودن لینک یا شناسهٔ BGG
-            </button>
-          )}
+          ) : null}
+          <button
+            type="button"
+            onClick={() => navigate(`/games/${copy.id}/bgg`)}
+            className="w-full bg-[#4F4839] text-white py-4 rounded-3xl text-xs font-bold flex items-center justify-center gap-2 min-h-11"
+          >
+            <Icon name="fa-cloud-arrow-down" /> {work?.bggId ? 'به‌روزرسانی مشخصات از BGG' : 'پیدا کردن این بازی در BGG'}
+          </button>
         </section>
 
         <section className="space-y-4 pb-12">

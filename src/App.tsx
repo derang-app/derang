@@ -13,7 +13,8 @@ import EditGame from './screens/EditGame';
 import LogSession from './screens/LogSession';
 import Picker from './screens/Picker';
 import Players from './screens/Players';
-import Settings, { AiSettings, ProfileSettings } from './screens/Settings';
+import Settings, { AiSettings, BggSettings, ProfileSettings } from './screens/Settings';
+import BggLookup from './screens/BggLookup';
 import Backup from './screens/Backup';
 import Stats from './screens/Stats';
 import ReadingPath from './screens/ReadingPath';
@@ -54,6 +55,8 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/profile" element={<ProfileSettings />} />
             <Route path="/settings/ai" element={<AiSettings />} />
+            <Route path="/settings/bgg" element={<BggSettings />} />
+            <Route path="/games/:id/bgg" element={<BggLookup />} />
             <Route path="/settings/backup" element={<Backup />} />
             <Route path="/stats" element={<Stats />} />
             <Route path="/reading-path" element={<ReadingPath />} />

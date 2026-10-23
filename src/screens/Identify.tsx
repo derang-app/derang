@@ -333,6 +333,19 @@ export default function Identify() {
               </div>
             )}
 
+            {kind === 'game' && (
+              <button
+                type="button"
+                onClick={() => {
+                  const c = data.candidates[chosen] as GameSuggestion | undefined;
+                  navigate(`/games/${id}/bgg?q=${encodeURIComponent(c?.bggId ?? c?.originalName ?? subject.name)}`);
+                }}
+                className="w-full py-4 bg-[#4F4839] text-white rounded-3xl text-xs font-bold flex items-center justify-center gap-2 min-h-11"
+              >
+                <Icon name="fa-cloud-arrow-down" />
+                <span>بررسی همین گزینه در BoardGameGeek</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => navigate(kind === 'book' ? `/books/${id}/edit` : `/games/${id}/edit`)}

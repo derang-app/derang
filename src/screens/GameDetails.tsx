@@ -56,6 +56,7 @@ export default function GameDetails() {
             items={[
               { label: 'ویرایش اطلاعات', icon: 'fa-pen', onClick: () => navigate(`/games/${copy.id}/edit`) },
               { label: 'مشخصات فنی و منشأ داده', icon: 'fa-dice-d20', onClick: () => navigate(`/games/${copy.id}/specs`) },
+              { label: 'دریافت مشخصات از BGG', icon: 'fa-cloud-arrow-down', onClick: () => navigate(`/games/${copy.id}/bgg`) },
               { label: 'شناسایی بازی اصلی با AI', icon: 'fa-wand-magic-sparkles', onClick: () => navigate(`/identify/game/${copy.id}`) },
               ...(copy.owned ? [] : [{ label: 'این بازی را خریدم', icon: 'fa-cart-arrow-down', onClick: () => updateGameCopy(copy.id, { owned: true }) }]),
               { label: 'حذف', icon: 'fa-trash-can', onClick: remove, danger: true },
