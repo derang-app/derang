@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // GitHub Pages serves the app under /<repo>/; local dev uses /.
 const base = process.env.DERANG_BASE ?? '/';
+// Public origin, so the manifest can point at itself (lets the app detect its own install).
+const site = process.env.DERANG_SITE ?? 'http://localhost:5173';
 
 export default defineConfig({
   base,
@@ -24,8 +26,11 @@ export default defineConfig({
         description: 'مدیریت دنج کتاب و بردگیم',
         lang: 'fa',
         dir: 'rtl',
-        start_url: '.',
-        scope: '.',
+        // Explicit, unique identity: other apps on the same github.io origin must never be confused with this one.
+        id: `${base}?app=derang`,
+        start_url: base,
+        scope: base,
+        related_applications: [{ platform: 'webapp', url: `${site}${base}manifest.webmanifest` }],
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#FFF9F0',

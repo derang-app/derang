@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import { collectOrphanPhotos, requestPersistence } from './lib/startup';
+import { captureInstallPrompt } from './lib/install';
+
+captureInstallPrompt();
 import './styles.css';
 
 createRoot(document.getElementById('root')!).render(

@@ -6,6 +6,7 @@ import { db } from '../db/db';
 import { wipeAllData } from '../lib/backup';
 import { deletePhotos } from '../lib/images';
 import { enableReminder, disableReminder, reminderSupport } from '../lib/reminder';
+import { useInstallState } from '../lib/install';
 import { fa } from '../lib/text';
 import { BGG_APPLICATIONS_URL, BGG_ERROR_TEXT, BGG_SECRET, BggError, searchBgg } from '../online/bgg';
 import { BottomNav } from '../ui/BottomNav';
@@ -67,6 +68,8 @@ export default function Settings() {
         </Link>
 
         <div className="space-y-8">
+          <InstallCard />
+
           <Group title="مجموعه">
             <Item icon="fa-chart-simple" label="آمار و گزارش‌ها" to="/stats" />
             <Item icon="fa-road" label="مسیر مطالعه من" to="/reading-path" />
@@ -473,6 +476,58 @@ export function BggSettings() {
           Powered by BoardGameGeek. هر درخواست با فاصلهٔ حداقل دو ثانیه فرستاده می‌شود.
         </p>
       </main>
+    </div>
+  );
+}
+
+/** Install status, plus a direct install button when Chrome allows it. */
+function InstallCard() {
+  const { state, install } = useInstallState();
+  const { toast } = useOverlay();
+  if (!state || state === 'running-installed') return null;
+  if (state === 'installed') {
+    return (
+      <div className="settings-item">
+        <div className="flex items-center gap-4">
+          <IconBox icon="fa-circle-check" />
+          <div>
+            <span className="text-sm font-bold block">درنگ روی این دستگاه نصب است</span>
+            <span className="text-[10px] text-gray-500">از فهرست برنامه‌ها یا صفحهٔ اصلی بازش کن.</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (state === 'can-install') {
+    return (
+      <button
+        type="button"
+        onClick={async () => {
+          if (await install()) toast('درنگ نصب شد');
+        }}
+        className="w-full bg-[#8E3200] text-white p-5 rounded-[2rem] flex items-center gap-4 shadow-xl shadow-[#8E3200]/20 text-right"
+      >
+        <span className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
+          <Icon name="fa-download" />
+        </span>
+        <span className="flex-1">
+          <span className="block text-sm font-bold">نصب درنگ روی این دستگاه</span>
+          <span className="block text-[10px] text-white/75">با آیکن خودش و بدون نوار مرورگر باز می‌شود.</span>
+        </span>
+      </button>
+    );
+  }
+  return (
+    <div className="settings-item items-start">
+      <div className="flex items-start gap-4">
+        <IconBox icon="fa-download" />
+        <div>
+          <span className="text-sm font-bold block">نصب درنگ</span>
+          <span className="text-[10px] text-gray-500 leading-relaxed block">
+            اگر دکمهٔ نصب ظاهر نشد: در Chrome منوی ⋮ ← «Cast, save and share» یا «ذخیره و اشتراک» ← «Install page as app»، یا در اندروید «افزودن به صفحهٔ اصلی».
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
