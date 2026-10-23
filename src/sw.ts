@@ -34,7 +34,8 @@ async function maybeRemind() {
     await self.registration.showNotification('درنگ', {
       body: 'اگر حوصله‌اش هست، چند صفحه‌ای از کتابت بخوان.',
       icon: 'icon-192.png',
-      badge: 'icon-192.png',
+      // Status-bar badge: white silhouette on transparent (Android masks it to one colour).
+      badge: 'badge-96.png',
       lang: 'fa',
       dir: 'rtl',
       tag: REMINDER_TAG,
