@@ -50,7 +50,7 @@ function line(label: string, value: unknown) {
   return `${label}: ${Array.isArray(value) ? value.join('، ') : value}\n`;
 }
 
-function describeBook(copy: BookCopy, work?: BookWork) {
+function describeBook(copy: BookCopy, work: BookWork | undefined, freeText: boolean) {
   return (
     line('عنوان نسخهٔ من', copy.title) +
     line('عنوان اصلی اثر', work?.title) +
@@ -64,14 +64,17 @@ function describeBook(copy: BookCopy, work?: BookWork) {
     line('وضعیت', copy.owned ? STATUS_LABEL[copy.status] : 'در فهرست علاقه‌مندی (هنوز ندارم)') +
     line('امتیاز من', copy.rating ? `${copy.rating} از ۵` : undefined) +
     line('تاریخ پایان', copy.finishedAt ? formatJalali(copy.finishedAt) : undefined) +
-    line('برداشت پایانی من', copy.reflection?.text) +
-    line('حس پایانی من', copy.reflection?.moods)
+    (freeText ? line('برداشت پایانی من', copy.reflection?.text) + line('حس پایانی من', copy.reflection?.moods) : '')
   );
 }
 
+/** One gate for all free text the user wrote (notes, quotes, reflections, session notes). */
+async function allowFreeText() {
+  return (await getSetting('ai')).includeNotes;
+}
+
 async function notesBlock(copyId: string) {
-  const ai = await getSetting('ai');
-  if (!ai.includeNotes) return 'یادداشت‌ها: (کاربر اجازهٔ ارسال یادداشت‌ها را نداده است)\n';
+  if (!(await allowFreeText())) return 'یادداشت‌ها: (کاربر اجازهٔ ارسال یادداشت‌ها را نداده است)\n';
   const notes = await db.notes.where('copyId').equals(copyId).sortBy('createdAt');
   if (!notes.length) return 'یادداشت‌ها: هنوز یادداشتی ثبت نشده.\n';
   return (
@@ -84,12 +87,13 @@ async function notesBlock(copyId: string) {
 }
 
 async function readLibrary(excludeId?: string) {
+  const freeText = await allowFreeText();
   const copies = await db.bookCopies.filter((c) => c.owned && c.status === 'read' && c.id !== excludeId).toArray();
   const works = new Map((await db.bookWorks.toArray()).map((w) => [w.id, w]));
   return copies
     .map((c) => {
       const w = works.get(c.workId);
-      return `- «${c.title}»${w?.authors.length ? ` از ${w.authors.join('، ')}` : ''}${c.rating ? `، امتیاز ${c.rating}/۵` : ''}${c.reflection?.text ? `، برداشت: ${c.reflection.text}` : ''}`;
+      return `- «${c.title}»${w?.authors.length ? ` از ${w.authors.join('، ')}` : ''}${c.rating ? `، امتیاز ${c.rating}/۵` : ''}${freeText && c.reflection?.text ? `، برداشت: ${c.reflection.text}` : ''}`;
     })
     .join('\n');
 }
@@ -101,7 +105,7 @@ export async function readingCompanion(kind: Extract<AiKind, 'reflection_questio
   const copy = await db.bookCopies.get(copyId);
   if (!copy) throw new AiError('bad_output', 'missing');
   const work = await db.bookWorks.get(copy.workId);
-  const data = `اطلاعات کتاب (از داده‌های ثبت‌شدهٔ کاربر):\n${describeBook(copy, work)}\n${await notesBlock(copyId)}`;
+  const data = `اطلاعات کتاب (از داده‌های ثبت‌شدهٔ کاربر):\n${describeBook(copy, work, await allowFreeText())}\n${await notesBlock(copyId)}`;
   let task = '';
   let prompt = '';
   let extra = '';
@@ -174,7 +178,7 @@ export async function identifyBook(copyId: string, signal?: AbortSignal) {
   const work = await db.bookWorks.get(copy.workId);
   const images = await photoParts(copy.photoIds);
   const text = `این یک کتاب در مجموعهٔ کاربر است. عکس‌ها (اگر هست) جلد یا صفحهٔ شناسنامهٔ همین نسخه‌اند.
-اطلاعات فعلی:\n${describeBook(copy, work) || '(فقط عکس)'}
+اطلاعات فعلی:\n${describeBook(copy, work, false) || '(فقط عکس)'}
 نویسنده، مترجم، ناشر، شابک و اثر اصلی (عنوان به زبان اصلی) را پیشنهاد بده. کتاب‌ها اغلب ترجمهٔ فارسی‌اند.`;
   const data = await provider.json({ system: IDENTIFY_RULES, parts: [...images, { type: 'text', text }], maxTokens: 6000 }, IdentifyResult(BookCandidate), signal);
   await db.bookCopies.update(copyId, { matchStatus: copy.matchStatus === 'confirmed' ? 'confirmed' : 'suggested' });
@@ -216,11 +220,12 @@ export async function explainPicker(input: PickerInput, matches: Candidate[], si
   const provider = await getProvider();
   const people = await db.players.bulkGet(input.playerIds);
   const top = matches.slice(0, 4);
+  const freeText = await allowFreeText();
   const sessionsText = top
     .map((m) => {
       const s = m.game.sessions.slice(0, 5);
       if (!s.length) return `- ${m.game.copy.name}: جلسه‌ای ثبت نشده`;
-      return `- ${m.game.copy.name}: ${s.map((x) => `${formatJalali(x.at)}${x.notes ? ` («${x.notes}»)` : ''}`).join('؛ ')}`;
+      return `- ${m.game.copy.name}: ${s.map((x) => `${formatJalali(x.at)}${freeText && x.notes ? ` («${x.notes}»)` : ''}`).join('؛ ')}`;
     })
     .join('\n');
   const text = `شرایط جمع امروز: ${input.players} نفر، زمان ${TIME_WINDOWS[input.time].label}، آشنایی: ${FAMILIARITY[input.familiarity].label}${

@@ -116,7 +116,7 @@ export default function Settings() {
                 <div>
                   <span className="text-sm font-bold block text-[#8E3200]">تنظیم کلید سرویس AI</span>
                   <span className="text-[10px] text-[#8E3200]/80 font-medium">
-                    {keyHint ? `وضعیت: تنظیم‌شده (…${keyHint}) • ${ai.model}` : 'وضعیت: نیازمند تنظیم'}
+                    {keyHint ? `وضعیت: تنظیم‌شده (…${keyHint})، ${ai.model}` : 'وضعیت: نیازمند تنظیم'}
                   </span>
                 </div>
               </div>
@@ -205,7 +205,7 @@ function StorageInfo() {
         <div>
           <span className="text-sm font-bold block">فضای استفاده‌شده</span>
           <span className="text-[10px] text-gray-500">
-            {info.usage !== undefined ? `${fa((info.usage / 1024 / 1024).toFixed(1))} مگابایت` : 'نامشخص'} •{' '}
+            {info.usage !== undefined ? `${fa((info.usage / 1024 / 1024).toFixed(1))} مگابایت` : 'نامشخص'}،{' '}
             {info.persisted ? 'ذخیره‌سازی ماندگار فعال است' : 'ذخیره‌سازی ماندگار هنوز تأیید نشده؛ پشتیبان بگیر'}
           </span>
         </div>

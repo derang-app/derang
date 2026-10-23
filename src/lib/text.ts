@@ -48,7 +48,7 @@ export function formatRange(min?: number, max?: number): string {
   if (min === undefined && max === undefined) return '';
   if (min === undefined) return fa(max);
   if (max === undefined || max === min) return fa(min);
-  return `${fa(min)}-${fa(max)}`;
+  return `${fa(min)} تا ${fa(max)}`;
 }
 
 /**
@@ -99,4 +99,15 @@ export function clean(value: string | undefined): string | undefined {
 export function percent(part: number, total: number): number {
   if (!total) return 0;
   return Math.max(0, Math.min(100, Math.round((part / total) * 100)));
+}
+
+/** Only http(s) links are stored or rendered; anything else (e.g. `javascript:`) is dropped. */
+export function safeUrl(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  try {
+    const u = new URL(value.trim());
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.toString() : undefined;
+  } catch {
+    return undefined;
+  }
 }

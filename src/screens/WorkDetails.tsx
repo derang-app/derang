@@ -59,10 +59,10 @@ export default function WorkDetails() {
                   <span className="flex-1 min-w-0">
                     <span className="block text-xs font-bold text-[#4F4839] truncate">
                       {c.title}
-                      {c.translators.length ? ` • ترجمه ${c.translators.join('، ')}` : ''}
+                      {c.translators.length ? `، ترجمه ${c.translators.join('، ')}` : ''}
                     </span>
                     <span className="block text-[10px] text-gray-500">
-                      {[c.publisher, c.owned ? STATUS_LABEL[c.status] : 'علاقه‌مندی'].filter(Boolean).join(' • ')}
+                      {[c.publisher, c.owned ? STATUS_LABEL[c.status] : 'علاقه‌مندی'].filter(Boolean).join('، ')}
                     </span>
                   </span>
                 </button>

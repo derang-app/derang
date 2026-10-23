@@ -178,7 +178,7 @@ export default function Collection({ kind }: { kind: 'books' | 'games' }) {
                       g.work?.playTimeMax ?? g.work?.playTimeMin ? `${formatRange(g.work?.playTimeMin, g.work?.playTimeMax)} دقیقه` : '',
                     ]
                       .filter(Boolean)
-                      .join(' • ') || 'مشخصات ثبت نشده'}
+                      .join('، ') || 'مشخصات ثبت نشده'}
                   </p>
                   <div className="flex justify-between items-center pt-1">
                     <span className="text-[9px] text-[#8E3200] font-bold">{g.copy.edition ? EDITION_LABEL[g.copy.edition] : ' '}</span>

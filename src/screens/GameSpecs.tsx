@@ -2,7 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { SOURCE_LABEL } from '../db/provenance';
 import { useGame } from '../db/queries';
 import type { Source } from '../db/types';
-import { fa, formatRange } from '../lib/text';
+import { fa, formatRange, safeUrl } from '../lib/text';
 import { complexityLabel, EDITION_LABEL, INTERACTION_LABEL } from '../lib/vocab';
 import { cx, Icon, Loading, PageHeader, PhotoImg } from '../ui/kit';
 import { MatchBadge, NotFound } from './BookDetails';
@@ -98,7 +98,7 @@ export default function GameSpecs() {
           <h3 className="text-[10px] font-bold text-[#8E3200] uppercase tracking-widest px-2">منابع آنلاین</h3>
           {work?.refUrl || work?.bggId ? (
             <a
-              href={work.refUrl ?? `https://boardgamegeek.com/boardgame/${work.bggId}`}
+              href={safeUrl(work.refUrl) ?? `https://boardgamegeek.com/boardgame/${encodeURIComponent(work.bggId ?? '')}`}
               target="_blank"
               rel="noreferrer noopener"
               className="bg-white p-5 rounded-[2rem] border border-[#EEE2D3] flex items-center justify-between"

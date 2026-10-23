@@ -5,7 +5,7 @@ import { createBook } from '../db/books';
 import { createGame } from '../db/games';
 import type { Edition, ReadStatus } from '../db/types';
 import { deletePhotos } from '../lib/images';
-import { parseList, parseNum, parseRange, splitNames, toLatinDigits } from '../lib/text';
+import { parseList, parseNum, parseRange, safeUrl, splitNames, toLatinDigits } from '../lib/text';
 import { GAME_TAGS } from '../lib/vocab';
 import { AiHelperToggle, SelectField, TagEditor, TextField } from '../ui/fields';
 import { BackButton, BottomAction, cx, Icon, PrimaryButton } from '../ui/kit';
@@ -238,6 +238,6 @@ export function parseBgg(value: string): { bggId?: string; refUrl?: string } {
   const v = toLatinDigits(value.trim());
   if (!v) return {};
   const id = v.match(/boardgamegeek\.com\/(?:boardgame|boardgameexpansion)\/(\d+)/)?.[1] ?? (/^\d+$/.test(v) ? v : undefined);
-  if (/^https?:\/\//.test(v)) return { bggId: id, refUrl: v };
-  return id ? { bggId: id, refUrl: `https://boardgamegeek.com/boardgame/${id}` } : { refUrl: v };
+  if (/^https?:\/\//i.test(v)) return { bggId: id, refUrl: safeUrl(v) };
+  return id ? { bggId: id, refUrl: `https://boardgamegeek.com/boardgame/${id}` } : {};
 }

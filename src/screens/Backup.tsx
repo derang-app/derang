@@ -114,8 +114,8 @@ export default function Backup() {
             </p>
             {counts && (
               <p className="text-[11px] text-gray-500">
-                {fa(counts.books)} کتاب • {fa(counts.games)} بازی • {fa(counts.photos)} عکس
-                {lastBackup ? ` • آخرین پشتیبان: ${formatJalali(lastBackup)}` : ' • هنوز پشتیبان نگرفته‌ای'}
+                {fa(counts.books)} کتاب، {fa(counts.games)} بازی، {fa(counts.photos)} عکس
+                {lastBackup ? `، آخرین پشتیبان: ${formatJalali(lastBackup)}` : '، هنوز پشتیبان نگرفته‌ای'}
               </p>
             )}
             <button
@@ -170,7 +170,7 @@ export default function Backup() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-[#4F4839] truncate ltr text-right">{file.name}</p>
                     <p className="text-[10px] text-[#8E3200] font-medium">
-                      ساخته‌شده {formatJalali(parsed.manifest.createdAt)} • نسخهٔ قالب {fa(parsed.manifest.version)} • {size(parsed.sizeBytes)}
+                      ساخته‌شده {formatJalali(parsed.manifest.createdAt)}، نسخهٔ قالب {fa(parsed.manifest.version)}، {size(parsed.sizeBytes)}
                     </p>
                   </div>
                 </div>

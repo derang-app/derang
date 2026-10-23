@@ -50,7 +50,7 @@ describe('what should we play', () => {
     const reasons = r.matches[0].reasons.join(' ');
     expect(reasons).toContain('طبق تجربهٔ خودت');
     expect(reasons).toContain('مریم');
-    expect(reasons).toContain('۲-۴');
+    expect(reasons).toContain('۲ تا ۴');
   });
 
   it('explains empty results and only suggests relaxations that would help', () => {

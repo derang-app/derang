@@ -139,7 +139,7 @@ export default function GameDetails() {
                     <p className="text-sm font-bold text-[#4F4839]">بازی {fa(s.playerIds.length)} نفره</p>
                     <p className="text-[10px] text-gray-500 italic">
                       {relativeDays(s.at)}
-                      {s.durationMin ? ` • ${fa(s.durationMin)} دقیقه` : ''}
+                      {s.durationMin ? `، ${fa(s.durationMin)} دقیقه` : ''}
                     </p>
                   </div>
                 </div>

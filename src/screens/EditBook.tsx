@@ -4,7 +4,7 @@ import { updateCopy, updateWork } from '../db/books';
 import { deletePhotos } from '../lib/images';
 import { useBook } from '../db/queries';
 import type { ReadStatus } from '../db/types';
-import { fa, joinNames, parseNum, splitNames } from '../lib/text';
+import { fa, joinNames, parseNum, safeUrl, splitNames } from '../lib/text';
 import { JalaliField, SelectField, TextField } from '../ui/fields';
 import { BottomAction, Loading, PageHeader, PrimaryButton, Stars } from '../ui/kit';
 import { useOverlay } from '../ui/overlay';
@@ -80,7 +80,7 @@ export default function EditBook() {
       title: form.workTitle.trim() || undefined,
       authors: splitNames(form.authors),
       altTitles: splitNames(form.altTitles),
-      refUrl: form.refUrl.trim() || undefined,
+      refUrl: safeUrl(form.refUrl),
       refId: form.refId.trim() || undefined,
     });
     await deletePhotos(removed);

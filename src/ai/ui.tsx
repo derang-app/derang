@@ -111,7 +111,7 @@ export function AiAnswer({ response, onDelete, dark }: { response: AiResponse; o
     >
       <header className="flex justify-between items-center gap-2">
         <span className={cx('text-[10px] font-bold flex items-center gap-1.5', dark ? 'text-[#D7A86E]' : 'text-[#8E3200]')}>
-          <Icon name="fa-wand-magic-sparkles" /> برداشت هوش مصنوعی • {response.prompt}
+          <Icon name="fa-wand-magic-sparkles" /> برداشت هوش مصنوعی، {response.prompt}
         </span>
         {onDelete && (
           <button type="button" aria-label="حذف این پاسخ" onClick={onDelete} className={cx('w-9 h-9 -m-2', dark ? 'text-white/40' : 'text-gray-400')}>

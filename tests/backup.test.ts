@@ -101,4 +101,13 @@ describe('backup and restore', () => {
     zip.file('data.json', JSON.stringify(data));
     await expect(parseBackup(await zip.generateAsync({ type: 'blob' }))).rejects.toThrow(/bookCopies/);
   });
+
+  it('rejects non-http links from a file', async () => {
+    const book = await createBook({ title: 'x' });
+    const zip = await JSZip.loadAsync(await (await createBackup('0.1.0')).arrayBuffer());
+    const data = JSON.parse(await zip.file('data.json')!.async('string'));
+    data.bookWorks.find((w: { id: string }) => w.id === book.workId).refUrl = 'javascript:alert(1)';
+    zip.file('data.json', JSON.stringify(data));
+    await expect(parseBackup(await zip.generateAsync({ type: 'blob' }))).rejects.toThrow(/bookWorks/);
+  });
 });

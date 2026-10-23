@@ -309,7 +309,7 @@ function Result({
         <BackButton onClick={onBack} />
         <div className="text-center">
           <h1 className="text-lg font-bold text-[#4F4839]">پیشنهاد درنگ</h1>
-          <p className="text-[10px] text-[#8E3200] font-bold">از مجموعهٔ خودت • {fa(result.matches.length)} گزینه</p>
+          <p className="text-[10px] text-[#8E3200] font-bold">از مجموعهٔ خودت، {fa(result.matches.length)} گزینه</p>
         </div>
         <div className="w-12" />
       </header>

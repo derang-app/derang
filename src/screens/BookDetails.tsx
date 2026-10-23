@@ -9,7 +9,7 @@ import { useBook } from '../db/queries';
 import { getSetting, setSetting, useSetting } from '../db/settings';
 import type { BookCopy, BookWork, MatchStatus, Note, NoteKind, Provenance } from '../db/types';
 import { formatJalali, relativeDays } from '../lib/date';
-import { fa, parseNum, percent } from '../lib/text';
+import { fa, parseNum, percent, safeUrl } from '../lib/text';
 import { READING_MOODS, STATUS_LABEL } from '../lib/vocab';
 import { AiBanner, BackButton, cx, Icon, Loading, PhotoImg, ProgressBar, Stars } from '../ui/kit';
 import { Menu, Sheet, useOverlay } from '../ui/overlay';
@@ -122,7 +122,7 @@ export default function BookDetails() {
         <div className="bg-white p-4 rounded-3xl border border-[#EEE2D3] text-center">
           <p className="text-[10px] text-gray-500 font-bold mb-1 uppercase tracking-wider">{copy.status === 'read' ? 'امتیاز من' : 'پیشرفت'}</p>
           <p className="text-lg font-bold text-[#8E3200]">
-            {copy.status === 'read' ? (copy.rating ? `${fa(copy.rating)} از ۵` : '—') : pct !== undefined ? `${fa(pct)}٪` : copy.currentPage ? `ص ${fa(copy.currentPage)}` : '—'}
+            {copy.status === 'read' ? (copy.rating ? `${fa(copy.rating)} از ۵` : '—') : copy.status === 'unread' ? '—' : pct !== undefined ? `${fa(pct)}٪` : copy.currentPage ? `ص ${fa(copy.currentPage)}` : '—'}
           </p>
         </div>
       </section>
@@ -180,7 +180,7 @@ export default function BookDetails() {
             >
               <div className="flex justify-between items-start gap-2">
                 <span className="text-[10px] font-bold text-[#8E3200] uppercase">
-                  {[n.chapter, n.page ? `صفحه ${fa(n.page)}` : ''].filter(Boolean).join(' • ') || (n.kind === 'quote' ? 'نقل‌قول' : 'یادداشت')}
+                  {[n.chapter, n.page ? `صفحه ${fa(n.page)}` : ''].filter(Boolean).join('، ') || (n.kind === 'quote' ? 'نقل‌قول' : 'یادداشت')}
                 </span>
                 <span className="text-[10px] text-gray-500 italic">{relativeDays(n.createdAt)}</span>
               </div>
@@ -325,10 +325,10 @@ function StatusCard({
           {copy.pageCount ? `${fa(copy.currentPage ?? 0)} از ${fa(copy.pageCount)} صفحه` : copy.currentPage ? `صفحه ${fa(copy.currentPage)}` : '—'}
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={onFinish} className="text-white/80 px-3 py-2 rounded-xl text-xs font-bold min-h-11">
+          <button type="button" onClick={onFinish} className="text-white/80 px-3 py-2 rounded-xl text-xs font-bold min-h-11 whitespace-nowrap">
             تمام کردم
           </button>
-          <button type="button" onClick={onProgress} className="bg-white text-[#8E3200] px-5 py-2 rounded-xl text-sm font-bold active:scale-95 transition-transform min-h-11">
+          <button type="button" onClick={onProgress} className="bg-white text-[#8E3200] px-5 py-2 rounded-xl text-sm font-bold active:scale-95 transition-transform min-h-11 whitespace-nowrap">
             ثبت پیشرفت
           </button>
         </div>
@@ -567,8 +567,8 @@ function WorkTab({ work, copy, siblingCount }: { work?: BookWork; copy: BookCopy
         <InfoRow label="نویسنده" value={work?.authors.join('، ')} source={work?.provenance.authors} />
         <InfoRow label="نام‌های دیگر" value={work?.altTitles.join('، ')} source={work?.provenance.altTitles} />
         <InfoRow label="شناسه مرجع" value={work?.refId} source={work?.provenance.refId} ltr />
-        {work?.refUrl && (
-          <a href={work.refUrl} target="_blank" rel="noreferrer noopener" className="flex items-center justify-between py-3 text-sm font-bold text-[#8E3200]">
+        {safeUrl(work?.refUrl) && (
+          <a href={safeUrl(work?.refUrl)} target="_blank" rel="noreferrer noopener" className="flex items-center justify-between py-3 text-sm font-bold text-[#8E3200]">
             <span>مشاهدهٔ منبع مرجع</span>
             <Icon name="fa-arrow-up-right-from-square" className="text-xs" />
           </a>

@@ -89,7 +89,7 @@ textarea::placeholder {
     @apply w-full rounded-2xl border border-[#EEE2D3] bg-[#FFF9F0] px-4 py-3 text-xs focus:border-[#8E3200] focus:outline-none;
   }
   .field-label {
-    @apply pr-4 text-[10px] font-bold uppercase text-[#D7A86E];
+    @apply pr-4 text-[10px] font-bold uppercase text-[#8E3200];
   }
   .type-pill-active {
     background-color: #8e3200;

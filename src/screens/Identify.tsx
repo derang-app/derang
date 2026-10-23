@@ -274,7 +274,7 @@ export default function Identify() {
                           {i === 0 ? 'گزینهٔ اول' : 'سایر احتمالات'}
                         </span>
                       </div>
-                      <p className="text-[11px] text-gray-500 mt-1">{sub.filter(Boolean).join(' • ')}</p>
+                      <p className="text-[11px] text-gray-500 mt-1">{sub.filter(Boolean).join('، ')}</p>
                       <p className="text-[11px] text-[#433520] mt-2 leading-relaxed">
                         <span className="font-bold text-[#8E3200]">مبنا: </span>
                         {c.basis}
