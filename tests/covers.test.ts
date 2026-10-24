@@ -4,6 +4,7 @@ import { db } from '../src/db/db';
 import { setCover } from '../src/lib/cover';
 import { defaultQuad, enhance, isUsableQuad, outputSize, squareToQuad, warp, type Quad } from '../src/lib/scan';
 import { parseThing, parseXml } from '../src/online/bgg';
+import { guideInShot } from '../src/ui/ScannerCamera';
 import { coverPrompt, parseTaaghcheLink, readableImageUrl, taaghcheCoverUrl } from '../src/online/covers';
 
 describe('perspective warp', () => {
@@ -51,6 +52,28 @@ describe('perspective warp', () => {
     const crossed: Quad = [quad[0], quad[2], quad[1], quad[3]];
     expect(isUsableQuad(crossed, 130, 170)).toBe(false);
     expect(isUsableQuad(defaultQuad(1000, 1000, 0.45), 1000, 1000)).toBe(false);
+  });
+});
+
+describe('camera guide frame', () => {
+  it('maps the on-screen frame into the shot through object-cover cropping', () => {
+    // 1920×1080 landscape feed in a 375×812 portrait screen: scaled ×0.752, 534px cropped each side.
+    const box = { left: 0, top: 0, width: 375, height: 812 };
+    const frame = { left: 47.5, top: 200, width: 280, height: 420 };
+    const q = guideInShot(box, frame, 1920, 1080, 1);
+    const cover = 812 / 1080;
+    const ox = (375 - 1920 * cover) / 2;
+    expect(q[0].x).toBeCloseTo((47.5 - ox) / cover, 3);
+    expect(q[0].y).toBeCloseTo(200 / cover, 3);
+    expect(q[2].x).toBeCloseTo((327.5 - ox) / cover, 3);
+    expect(q[2].y).toBeCloseTo(620 / cover, 3);
+    // Frame centred on screen → centred in the shot.
+    expect((q[0].x + q[1].x) / 2).toBeCloseTo(960, 3);
+  });
+
+  it('scales to the stored shot size', () => {
+    const q = guideInShot({ left: 0, top: 0, width: 100, height: 100 }, { left: 0, top: 0, width: 100, height: 100 }, 1000, 1000, 0.5);
+    expect(q[2]).toEqual({ x: 500, y: 500 });
   });
 });
 

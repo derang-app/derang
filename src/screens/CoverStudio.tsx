@@ -12,6 +12,7 @@ import { defaultQuad, enhance, isUsableQuad, outputSize, sharpen, warp, type Qua
 import { BGG_ERROR_TEXT, BGG_SECRET, BggError, fetchBggGame } from '../online/bgg';
 import { chatGptUrl, COVER_ERROR_TEXT, CoverError, coverPrompt, downloadImage, parseTaaghcheLink, taaghcheCoverUrl, type PromptInfo } from '../online/covers';
 import { CornerEditor } from '../ui/CornerEditor';
+import { ScannerCamera } from '../ui/ScannerCamera';
 import { BottomAction, cx, Icon, Loading, PageHeader, PhotoImg, PrimaryButton, Spinner, Toggle } from '../ui/kit';
 import { useBackToClose, useOverlay } from '../ui/overlay';
 import { HiddenInputs } from '../ui/PhotoPicker';
@@ -26,7 +27,9 @@ type Busy = 'scan' | 'taaghche' | 'bgg' | 'chatgpt' | 'save';
 
 type Step =
   | { kind: 'home' }
-  | { kind: 'corners'; source: HTMLCanvasElement; url: string; quad?: Quad }
+  | { kind: 'camera' }
+  /** `ai`: let the AI place the corners (default: only when there's no starting outline). */
+  | { kind: 'corners'; source: HTMLCanvasElement; url: string; quad?: Quad; ai?: boolean }
   | { kind: 'preview'; canvas: HTMLCanvasElement; url: string; from: From; source?: HTMLCanvasElement; sourceUrl?: string; quad?: Quad };
 
 const EDITION_EN: Record<string, string> = {
@@ -64,6 +67,8 @@ export default function CoverStudio() {
   const ai = useAiReady();
   const [step, setStep] = useState<Step>({ kind: 'home' });
   const [busy, setBusy] = useState<Busy>();
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   // Object URLs belong to the step that made them.
   useEffect(() => {
@@ -133,7 +138,27 @@ export default function CoverStudio() {
       leave();
     });
 
-  // The corner step is the full-screen scanner from the ScannerUI design.
+  const scanInputs = <HiddenInputs onFiles={startScan} cameraRef={cameraRef} galleryRef={galleryRef} />;
+
+  // Camera and corner steps are the full-screen scanner from the ScannerUI design.
+  if (step.kind === 'camera') {
+    return (
+      <>
+        {scanInputs}
+        <ScannerCamera
+          aspect={kind === 'book' ? 2 / 3 : 1}
+          title={kind === 'book' ? 'جلد را داخل کادر بگذار' : 'روی جعبه را داخل کادر بگذار'}
+          hint="نور روز و بدون فلش؛ کادر لازم نیست دقیق باشد، لبه‌ها بعداً پیدا می‌شوند."
+          max={WORK_MAX}
+          onClose={() => window.history.back()}
+          onGallery={() => galleryRef.current?.click()}
+          onSystemCamera={() => cameraRef.current?.click()}
+          onShot={async ({ canvas, guide }) => setStep({ kind: 'corners', source: canvas, url: await displayUrl(canvas), quad: guide, ai: true })}
+        />
+      </>
+    );
+  }
+
   if (step.kind === 'corners') {
     return (
       <Corners
@@ -142,7 +167,7 @@ export default function CoverStudio() {
         source={step.source}
         url={step.url}
         initial={step.quad}
-        aiReady={ai.configured && online && !step.quad}
+        aiReady={ai.configured && online && (step.ai ?? !step.quad)}
         onClose={() => window.history.back()}
         onDone={async (quad) => {
           const canvas = flatten(step.source, quad, true);
@@ -154,6 +179,7 @@ export default function CoverStudio() {
 
   return (
     <div className="pb-36 page-enter">
+      {scanInputs}
       <PageHeader
         title={step.kind === 'preview' ? 'پیش‌نمایش جلد' : 'جلد باکیفیت'}
         subtitle={name}
@@ -166,7 +192,8 @@ export default function CoverStudio() {
           data={data}
           online={online}
           busy={busy}
-          onScan={startScan}
+          onCamera={() => setStep({ kind: 'camera' })}
+          onGallery={() => galleryRef.current?.click()}
           onTaaghche={fromTaaghche}
           onBgg={fromBgg}
           onChatGpt={fromChatGpt}
@@ -222,7 +249,8 @@ function Home({
   data,
   online,
   busy,
-  onScan,
+  onCamera,
+  onGallery,
   onTaaghche,
   onBgg,
   onChatGpt,
@@ -232,14 +260,13 @@ function Home({
   data: Data;
   online: boolean;
   busy?: Busy;
-  onScan: (f: FileList | null) => void;
+  onCamera: () => void;
+  onGallery: () => void;
   onTaaghche: (bookId: string) => void;
   onBgg: (bggId: string) => void;
   onChatGpt: (f: FileList | null) => void;
   onLinkBgg: () => void;
 }) {
-  const cameraRef = useRef<HTMLInputElement>(null);
-  const galleryRef = useRef<HTMLInputElement>(null);
   const chatRef = useRef<HTMLInputElement>(null);
   const chatCameraRef = useRef<HTMLInputElement>(null);
   const copy = data.copy;
@@ -248,7 +275,6 @@ function Home({
 
   return (
     <main className="px-6 space-y-10 mt-4">
-      <HiddenInputs onFiles={onScan} cameraRef={cameraRef} galleryRef={galleryRef} />
       <HiddenInputs onFiles={onChatGpt} cameraRef={chatCameraRef} galleryRef={chatRef} />
 
       {/* Current cover, framed like the identification results header. */}
@@ -282,14 +308,14 @@ function Home({
           <div className="flex gap-3 mt-5">
             <button
               type="button"
-              onClick={() => cameraRef.current?.click()}
+              onClick={onCamera}
               className="bg-[#8E3200] text-white px-5 py-3 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-[#8E3200]/20 min-h-11"
             >
               <Icon name="fa-camera" /> گرفتن عکس
             </button>
             <button
               type="button"
-              onClick={() => galleryRef.current?.click()}
+              onClick={onGallery}
               className="bg-white border border-[#EEE2D3] text-[#4F4839] px-5 py-3 rounded-2xl text-xs font-bold flex items-center gap-2 min-h-11"
             >
               <Icon name="fa-images" className="text-[#D7A86E]" /> از گالری
