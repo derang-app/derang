@@ -36,6 +36,8 @@ export default defineConfig({
         start_url: base,
         scope: base,
         related_applications: [{ platform: 'webapp', url: `${site}${base}manifest.webmanifest` }],
+        // Shows Derang in Android's share sheet (e.g. «اشتراک‌گذاری» in Taaghche); handled in src/lib/share.ts.
+        share_target: { action: base, method: 'GET', params: { title: 'title', text: 'text', url: 'url' } },
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#FFF9F0',

@@ -4,8 +4,10 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import { collectOrphanPhotos, requestPersistence } from './lib/startup';
 import { captureInstallPrompt } from './lib/install';
+import { routeSharedText } from './lib/share';
 
 captureInstallPrompt();
+routeSharedText();
 import './styles.css';
 
 createRoot(document.getElementById('root')!).render(

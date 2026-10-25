@@ -7,7 +7,9 @@ declare const self: ServiceWorkerGlobalScope;
 
 // Offline: precache the whole app shell. Updates activate immediately so a new
 // deploy reaches the phone on the next launch.
-precacheAndRoute(self.__WB_MANIFEST);
+// A share from another app opens the start URL with ?title=&text=&url= (see lib/share);
+// it's still the precached app shell, so it works offline too.
+precacheAndRoute(self.__WB_MANIFEST, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^(title|text|url)$/] });
 cleanupOutdatedCaches();
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));

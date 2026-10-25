@@ -178,6 +178,7 @@ export default function AddEntry() {
 
         {kind === 'book' && (
           <TaaghcheImport
+            shared={params.get('share') ?? undefined}
             done={taaghche?.fields.title}
             onImport={async (id, signal) => {
               // Cover and details are independent: either one is worth keeping on its own.
@@ -300,10 +301,19 @@ export default function AddEntry() {
 }
 
 /** Same card as «جلد از طاقچه» in the cover studio, but it also fills in the book's details. */
-function TaaghcheImport({ done, onImport }: { done?: string; onImport: (id: string, signal: AbortSignal) => Promise<void> }) {
+function TaaghcheImport({
+  shared,
+  done,
+  onImport,
+}: {
+  /** Text shared to Derang from another app (see lib/share). */
+  shared?: string;
+  done?: string;
+  onImport: (id: string, signal: AbortSignal) => Promise<void>;
+}) {
   const { toast } = useOverlay();
   const online = useOnline();
-  const [link, setLink] = useState('');
+  const [link, setLink] = useState(shared ?? '');
   const [busy, setBusy] = useState(false);
   const abort = useRef<AbortController>(undefined);
   useEffect(() => () => abort.current?.abort(), []);
@@ -322,6 +332,15 @@ function TaaghcheImport({ done, onImport }: { done?: string; onImport: (id: stri
       setBusy(false);
     }
   };
+
+  // Shared from Taaghche: fetch right away. A timer, so StrictMode's double mount only runs it once.
+  useEffect(() => {
+    if (!shared) return;
+    const found = parseTaaghcheLink(shared);
+    const t = setTimeout(() => (found ? run(found) : toast('در متن به‌اشتراک‌گذاشته لینک کتاب طاقچه پیدا نشد', 'error')), 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const paste = async () => {
     try {
