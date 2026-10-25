@@ -241,9 +241,9 @@ export default function AddEntry() {
           <div className="space-y-6">
             <TextField label="عنوان کتاب" value={title} onChange={setTitle} placeholder="نام کتاب را وارد کنید..." />
             <TextField label="نویسنده / پدیدآور" value={author} onChange={setAuthor} placeholder="نام نویسنده... (اختیاری)" hint="چند نام را با «،» جدا کن." />
-            {(taaghche || translator || publisher || publication) && (
+            <TextField label="مترجم" value={translator} onChange={setTranslator} placeholder="(اختیاری)" hint="کتاب تألیفی فارسی است؟ خالی بگذار." />
+            {(taaghche || publisher || publication) && (
               <>
-                <TextField label="مترجم" value={translator} onChange={setTranslator} placeholder="(اختیاری)" />
                 <div className="grid grid-cols-2 gap-4">
                   <TextField label="ناشر" value={publisher} onChange={setPublisher} placeholder="(اختیاری)" />
                   <TextField label="مشخصات انتشار" value={publication} onChange={setPublication} placeholder="(اختیاری)" />
