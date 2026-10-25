@@ -4,13 +4,13 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { identifyBook, identifyGame, type BookSuggestion, type GameSuggestion, type IdentifyData } from '../ai/tasks';
 import { AiStateCard, useAiReady, useAiTask } from '../ai/ui';
 import { linkCopyToWork, updateCopy, updateWork } from '../db/books';
-import { db } from '../db/db';
+import { db, saveErrorText, saveWithTimeout } from '../db/db';
 import { linkGameCopyToWork, updateGameCopy, updateGameWork } from '../db/games';
 import { isManual } from '../db/provenance';
 import type { AiResponse, Provenance, Source } from '../db/types';
 import { fa, formatRange, normalizeForSearch } from '../lib/text';
 import { GAME_TAGS } from '../lib/vocab';
-import { BackButton, BottomAction, cx, Icon, Loading, PhotoImg } from '../ui/kit';
+import { BackButton, BottomAction, cx, Icon, Loading, PhotoImg, Spinner } from '../ui/kit';
 import { useOverlay } from '../ui/overlay';
 import { NotFound } from './BookDetails';
 
@@ -40,6 +40,7 @@ export default function Identify() {
   const [responseId, setResponseId] = useState<string>();
   const [chosen, setChosen] = useState(0);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const [saving, setSaving] = useState(false);
 
   const subject = useLiveQuery(async () => {
     if (kind === 'book') {
@@ -130,33 +131,45 @@ export default function Identify() {
   if (subject === null) return <NotFound />;
   const back = kind === 'book' ? `/books/${id}` : `/games/${id}`;
 
-  const apply = async (source: Source) => {
-    const copyPatch: Record<string, unknown> = {};
-    const workPatch: Record<string, unknown> = {};
-    for (const f of fields) if (isPicked(f)) (f.target === 'copy' ? copyPatch : workPatch)[f.key] = f.value;
-    if (kind === 'book') {
-      await updateCopy(id, { ...copyPatch, matchStatus: source === 'ai_confirmed' ? 'confirmed' : 'suggested' }, source);
-      if (Object.keys(workPatch).length) await updateWork(subject.copy.workId, workPatch, source);
-    } else {
-      await updateGameCopy(id, { matchStatus: source === 'ai_confirmed' ? 'confirmed' : 'suggested' }, source);
-      if (workPatch.bggId) workPatch.refUrl = `https://boardgamegeek.com/boardgame/${workPatch.bggId}`;
-      if (Object.keys(workPatch).length) await updateGameWork(subject.copy.workId, workPatch, source);
+  /** Every write here goes through one guard: a busy flag, a timeout, and a visible error instead of a dead button. */
+  const guarded = async (write: () => Promise<void>, done: string) => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await saveWithTimeout(write);
+      toast(done);
+      navigate(back, { replace: true });
+    } catch (e) {
+      toast(saveErrorText(e), 'error');
+      setSaving(false);
     }
-    toast(source === 'ai_confirmed' ? 'اطلاعات تأیید و ثبت شد' : 'به‌عنوان پیشنهاد تأییدنشده ذخیره شد');
-    navigate(back, { replace: true });
   };
 
-  const linkExisting = async (workId: string) => {
-    if (kind === 'book') {
-      await linkCopyToWork(id, workId);
-      await updateCopy(id, { matchStatus: 'confirmed' });
-    } else {
-      await linkGameCopyToWork(id, workId);
-      await updateGameCopy(id, { matchStatus: 'confirmed' });
-    }
-    toast('به اثر موجود متصل شد');
-    navigate(back, { replace: true });
-  };
+  const apply = (source: Source) =>
+    guarded(async () => {
+      const copyPatch: Record<string, unknown> = {};
+      const workPatch: Record<string, unknown> = {};
+      for (const f of fields) if (isPicked(f)) (f.target === 'copy' ? copyPatch : workPatch)[f.key] = f.value;
+      if (kind === 'book') {
+        await updateCopy(id, { ...copyPatch, matchStatus: source === 'ai_confirmed' ? 'confirmed' : 'suggested' }, source);
+        if (Object.keys(workPatch).length) await updateWork(subject.copy.workId, workPatch, source);
+      } else {
+        await updateGameCopy(id, { matchStatus: source === 'ai_confirmed' ? 'confirmed' : 'suggested' }, source);
+        if (workPatch.bggId) workPatch.refUrl = `https://boardgamegeek.com/boardgame/${workPatch.bggId}`;
+        if (Object.keys(workPatch).length) await updateGameWork(subject.copy.workId, workPatch, source);
+      }
+    }, source === 'ai_confirmed' ? 'اطلاعات تأیید و ثبت شد' : 'به‌عنوان پیشنهاد تأییدنشده ذخیره شد');
+
+  const linkExisting = (workId: string) =>
+    guarded(async () => {
+      if (kind === 'book') {
+        await linkCopyToWork(id, workId);
+        await updateCopy(id, { matchStatus: 'confirmed' });
+      } else {
+        await linkGameCopyToWork(id, workId);
+        await updateGameCopy(id, { matchStatus: 'confirmed' });
+      }
+    }, 'به اثر موجود متصل شد');
 
   // Processing screen
   if (task.running) {
@@ -294,6 +307,7 @@ export default function Identify() {
                     key={w.id}
                     type="button"
                     onClick={() => linkExisting(w.id)}
+                    disabled={saving}
                     className="w-full flex items-center justify-between bg-[#FFF9F0] p-3 rounded-2xl text-xs font-bold text-[#8E3200] min-h-11"
                   >
                     <span className="ltr">{w.label}</span>
@@ -367,17 +381,19 @@ export default function Identify() {
             <button
               type="button"
               onClick={() => apply('ai_unconfirmed')}
-              className="flex-1 bg-white border border-[#EEE2D3] text-[#4F4839] py-4 rounded-2xl font-bold text-xs shadow-sm min-h-11"
+              disabled={saving}
+              className="flex-1 bg-white border border-[#EEE2D3] text-[#4F4839] py-4 rounded-2xl font-bold text-xs shadow-sm min-h-11 disabled:opacity-60"
             >
               ذخیره به‌عنوان پیشنهاد
             </button>
             <button
               type="button"
               onClick={() => apply('ai_confirmed')}
-              className="flex-[2] bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-[#8E3200]/20 flex items-center justify-center gap-2 min-h-11"
+              disabled={saving}
+              className="flex-[2] bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-[#8E3200]/20 flex items-center justify-center gap-2 min-h-11 disabled:opacity-60"
             >
               <span>تأیید و تکمیل اطلاعات</span>
-              <Icon name="fa-arrow-left" />
+              {saving ? <Spinner /> : <Icon name="fa-arrow-left" />}
             </button>
           </div>
         </BottomAction>

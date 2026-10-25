@@ -1,5 +1,7 @@
-import { useEffect, useLayoutEffect } from 'react';
+import { Component, useEffect, useLayoutEffect, type ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
+import { reconnect } from './db/db';
+import { Icon } from './ui/kit';
 import { OverlayProvider } from './ui/overlay';
 import { BottomNav } from './ui/BottomNav';
 import Home from './screens/Home';
@@ -96,6 +98,52 @@ function KeyboardWatch() {
   return null;
 }
 
+/**
+ * A page that throws (e.g. a lost database connection on Android) shows a way out
+ * instead of a blank screen. Keyed by location, so moving to another page starts fresh.
+ */
+class PageErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  retry = async () => {
+    await reconnect().catch(() => undefined);
+    window.location.reload();
+  };
+  home = () => {
+    window.location.hash = '#/';
+    window.location.reload();
+  };
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div className="min-h-screen flex items-center px-6 page-enter">
+        <div className="state-card border-red-100 bg-red-50/20 w-full">
+          <div className="w-16 h-16 bg-red-100/50 rounded-full flex items-center justify-center text-red-500 mx-auto mb-4">
+            <Icon name="fa-circle-exclamation" className="text-2xl" />
+          </div>
+          <h3 className="text-sm font-bold text-red-700">این صفحه باز نشد</h3>
+          <p className="text-[11px] text-red-700/80 mt-2 px-4 leading-relaxed">اطلاعاتت سر جایش است؛ با بارگذاری دوباره معمولاً درست می‌شود.</p>
+          <div className="flex gap-3 justify-center mt-6">
+            <button type="button" onClick={this.retry} className="bg-[#8E3200] text-white px-6 py-3 rounded-xl text-xs font-bold min-h-11">
+              بارگذاری دوباره
+            </button>
+            <button type="button" onClick={this.home} className="bg-white border border-red-200 text-red-600 px-6 py-3 rounded-xl text-xs font-bold min-h-11">
+              صفحهٔ اصلی
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
+function SafeRoutes({ children }: { children: ReactNode }) {
+  const { key } = useLocation();
+  return <PageErrorBoundary key={key}>{children}</PageErrorBoundary>;
+}
+
 export default function App() {
   return (
     <HashRouter>
@@ -103,35 +151,37 @@ export default function App() {
         <ScrollMemory />
         <KeyboardWatch />
         <div className="app-frame">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/books" element={<Collection key="books" kind="books" />} />
-            <Route path="/games" element={<Collection key="games" kind="games" />} />
-            <Route path="/add" element={<AddEntry />} />
-            <Route path="/books/:id" element={<BookDetails />} />
-            <Route path="/books/:id/edit" element={<EditBook />} />
-            <Route path="/works/:id" element={<WorkDetails />} />
-            <Route path="/games/:id" element={<GameDetails />} />
-            <Route path="/games/:id/specs" element={<GameSpecs />} />
-            <Route path="/games/:id/edit" element={<EditGame />} />
-            <Route path="/games/:id/log" element={<LogSession />} />
-            <Route path="/games/:id/log/:sessionId" element={<LogSession />} />
-            <Route path="/identify/:kind/:id" element={<Identify />} />
-            <Route path="/cover/:kind/:id" element={<CoverStudio />} />
-            <Route path="/picker" element={<Picker />} />
-            <Route path="/players" element={<Players />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/settings/profile" element={<ProfileSettings />} />
-            <Route path="/settings/ai" element={<AiSettings />} />
-            <Route path="/settings/bgg" element={<BggSettings />} />
-            <Route path="/games/:id/bgg" element={<BggLookup />} />
-            <Route path="/settings/backup" element={<Backup />} />
-            <Route path="/stats" element={<Stats />} />
-            <Route path="/reading-path" element={<ReadingPath />} />
-            <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <SafeRoutes>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/books" element={<Collection key="books" kind="books" />} />
+              <Route path="/games" element={<Collection key="games" kind="games" />} />
+              <Route path="/add" element={<AddEntry />} />
+              <Route path="/books/:id" element={<BookDetails />} />
+              <Route path="/books/:id/edit" element={<EditBook />} />
+              <Route path="/works/:id" element={<WorkDetails />} />
+              <Route path="/games/:id" element={<GameDetails />} />
+              <Route path="/games/:id/specs" element={<GameSpecs />} />
+              <Route path="/games/:id/edit" element={<EditGame />} />
+              <Route path="/games/:id/log" element={<LogSession />} />
+              <Route path="/games/:id/log/:sessionId" element={<LogSession />} />
+              <Route path="/identify/:kind/:id" element={<Identify />} />
+              <Route path="/cover/:kind/:id" element={<CoverStudio />} />
+              <Route path="/picker" element={<Picker />} />
+              <Route path="/players" element={<Players />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/profile" element={<ProfileSettings />} />
+              <Route path="/settings/ai" element={<AiSettings />} />
+              <Route path="/settings/bgg" element={<BggSettings />} />
+              <Route path="/games/:id/bgg" element={<BggLookup />} />
+              <Route path="/settings/backup" element={<Backup />} />
+              <Route path="/stats" element={<Stats />} />
+              <Route path="/reading-path" element={<ReadingPath />} />
+              <Route path="/wishlist" element={<Wishlist />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </SafeRoutes>
           <BottomNav />
         </div>
       </OverlayProvider>

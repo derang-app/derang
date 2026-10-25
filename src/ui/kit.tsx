@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db/db';
+import { db, isConnected } from '../db/db';
 import { fa } from '../lib/text';
 
 /** Wraps async handlers so a double tap runs them once; `busy` is true while one runs. */
@@ -308,13 +308,56 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 /** Placeholder while local data loads; the dots appear only if it takes noticeably long, so quick loads don't flash. */
+const AUTO_RELOAD_KEY = 'derang.loadingReloadAt';
+
+/**
+ * Pages wait here for their data. A dead database connection (Android, after the app sat
+ * in the background) leaves them waiting forever, so after a few seconds check it and
+ * reload into a fresh one; nothing typed is lost on a loading screen.
+ */
 export function Loading() {
   const [show, setShow] = useState(false);
+  const [stuck, setStuck] = useState(false);
   useEffect(() => {
+    let alive = true;
     const t = setTimeout(() => setShow(true), 300);
-    return () => clearTimeout(t);
+    const check = setTimeout(async () => {
+      const ok = await isConnected();
+      if (!alive) return;
+      let last = 0;
+      try {
+        last = Number(sessionStorage.getItem(AUTO_RELOAD_KEY)) || 0;
+      } catch {
+        // Storage blocked: fall back to the button.
+      }
+      // At most one automatic reload per half minute, so a lasting problem can't loop.
+      if (!ok && Date.now() - last > 30_000) {
+        try {
+          sessionStorage.setItem(AUTO_RELOAD_KEY, String(Date.now()));
+        } catch {
+          // Ignore.
+        }
+        window.location.reload();
+        return;
+      }
+      setStuck(true);
+    }, 4000);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+      clearTimeout(check);
+    };
   }, []);
-  return <div className="min-h-[60vh] flex items-center justify-center">{show && <Spinner />}</div>;
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6">
+      {show && <Spinner />}
+      {stuck && (
+        <button type="button" onClick={() => window.location.reload()} className="bg-white border border-[#EEE2D3] text-[#4F4839] px-6 py-3 rounded-xl text-xs font-bold min-h-11">
+          بارگذاری دوباره
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function ChipButton({

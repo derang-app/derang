@@ -67,5 +67,56 @@ export function setDatabase(next: DerangDB) {
   db = next;
 }
 
+/**
+ * Android can drop the database connection while the app sits in the background
+ * (camera, another app); requests on it then fail or never answer at all.
+ * Close and reopen it so the next request gets a fresh connection.
+ */
+export async function reconnect() {
+  db.close({ disableAutoOpen: false });
+  await db.open();
+}
+
+export class DbTimeout extends Error {
+  name = 'DbTimeout';
+}
+
+/** Run a save, giving up after `ms` (and reconnecting) instead of leaving a button stuck forever. */
+export async function saveWithTimeout<T>(fn: () => Promise<T>, ms = 10_000): Promise<T> {
+  let timer = 0;
+  try {
+    return await Promise.race([
+      fn(),
+      new Promise<never>((_, reject) => {
+        timer = window.setTimeout(() => reject(new DbTimeout()), ms);
+      }),
+    ]);
+  } catch (e) {
+    const name = (e as Error)?.name;
+    if (name === 'DbTimeout' || name === 'DatabaseClosedError' || name === 'UnknownError' || name === 'InvalidStateError') reconnect().catch(() => undefined);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Toast text for a failed save; the error's name is kept so a report from the phone says what went wrong. */
+export function saveErrorText(e: unknown) {
+  const name = (e as Error)?.name;
+  if (name === 'DbTimeout') return 'ذخیره طول کشید و انجام نشد؛ دوباره «ثبت» را بزن.';
+  if (name === 'QuotaExceededError') return 'حافظهٔ گوشی پر است؛ ذخیره نشد.';
+  return `ذخیره نشد. دوباره تلاش کن.${name ? ` (${name})` : ''}`;
+}
+
+/** If a tiny read doesn't answer quickly, the connection is dead (and saveWithTimeout starts a reconnect). */
+export async function isConnected(ms = 3000) {
+  try {
+    await saveWithTimeout(() => db.kv.get('__ping'), ms);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const newId = () => crypto.randomUUID();
 export const now = () => Date.now();

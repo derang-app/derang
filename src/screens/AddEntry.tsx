@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApiKeyHint } from '../ai/secret';
 import { createBook } from '../db/books';
+import { saveErrorText, saveWithTimeout } from '../db/db';
 import { createGame } from '../db/games';
 import type { Edition, ReadStatus } from '../db/types';
 import { deletePhotos, importPhoto } from '../lib/images';
@@ -90,7 +91,7 @@ export default function AddEntry() {
       if (kind === 'book') {
         const current: BookFields = { title, author, translator, publisher, publication, pages };
         const fromTaaghche = (k: keyof BookFields) => !!taaghche?.fields[k] && taaghche.fields[k] === current[k];
-        const copy = await createBook({
+        const copy = await saveWithTimeout(() => createBook({
           title: label,
           authors: splitNames(author),
           translators: splitNames(translator),
@@ -109,13 +110,13 @@ export default function AddEntry() {
             ...(fromTaaghche('translator') ? ['translators'] : []),
             ...(fromTaaghche('pages') ? ['pageCount'] : []),
           ],
-        });
+        }));
         to = ai && aiConfigured ? `/identify/book/${copy.id}` : `/books/${copy.id}`;
       } else {
         const range = parseRange(allowed);
         const t = parseRange(time);
         const { bggId, refUrl } = parseBgg(bgg);
-        const copy = await createGame({
+        const copy = await saveWithTimeout(() => createGame({
           name: label,
           edition: edition || undefined,
           owned: !gameWish,
@@ -130,13 +131,13 @@ export default function AddEntry() {
           bggId,
           refUrl,
           specsSource: fromRulebook ? 'rulebook' : 'manual',
-        });
+        }));
         to = ai && aiConfigured ? `/identify/game/${copy.id}` : `/games/${copy.id}`;
       }
       toast('ذخیره شد');
       navigate(to, { replace: true });
-    } catch {
-      toast('ذخیره نشد. دوباره تلاش کن.', 'error');
+    } catch (e) {
+      toast(saveErrorText(e), 'error');
       setSaving(false);
     }
   };
