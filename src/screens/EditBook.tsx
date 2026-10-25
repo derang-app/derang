@@ -98,7 +98,7 @@ export default function EditBook() {
         <section className="space-y-6">
           <h2 className="text-sm font-bold text-[#4F4839] border-r-4 border-[#8E3200] pr-3">اطلاعات نسخهٔ من</h2>
           <TextField label="عنوان روی کتاب" value={form.title} onChange={set('title')} />
-          <TextField label="مترجم یا مترجمان" value={form.translators} onChange={set('translators')} hint="چند نام را با «،» جدا کن." />
+          <TextField label="مترجم یا مترجمان" value={form.translators} onChange={set('translators')} hint="چند نام را با «،» جدا کن. کتاب تألیفی فارسی است؟ خالی بگذار." />
           <div className="grid grid-cols-2 gap-4">
             <TextField label="ناشر" value={form.publisher} onChange={set('publisher')} />
             <TextField label="زبان" value={form.language} onChange={set('language')} placeholder="فارسی" />
@@ -132,9 +132,9 @@ export default function EditBook() {
         <section className="space-y-6">
           <h2 className="text-sm font-bold text-[#4F4839] border-r-4 border-[#D7A86E] pr-3">اطلاعات اثر اصلی</h2>
           <p className="text-[11px] text-gray-500 -mt-3 leading-relaxed">این بخش بین همهٔ نسخه‌ها و ترجمه‌های متصل به این اثر مشترک است.</p>
-          <TextField label="عنوان اصلی" value={form.workTitle} onChange={set('workTitle')} placeholder="Animal Farm" />
+          <TextField label="عنوان اصلی" value={form.workTitle} onChange={set('workTitle')} hint="برای ترجمه، عنوان به زبان اصلی؛ برای کتاب تألیفی، همان عنوان روی کتاب (خالی هم بماند همان حساب می‌شود)." />
           <TextField label="نویسنده یا نویسندگان" value={form.authors} onChange={set('authors')} />
-          <TextField label="نام‌های جایگزین" value={form.altTitles} onChange={set('altTitles')} placeholder="مزرعه حیوانات، ..." />
+          <TextField label="نام‌های جایگزین" value={form.altTitles} onChange={set('altTitles')} placeholder="(اختیاری)" />
           <TextField label="لینک مرجع" value={form.refUrl} onChange={set('refUrl')} ltr placeholder="https://..." />
           <TextField label="شناسهٔ مرجع" value={form.refId} onChange={set('refId')} ltr />
         </section>

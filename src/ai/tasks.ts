@@ -129,7 +129,7 @@ export async function readingCompanion(kind: Extract<AiKind, 'reflection_questio
 // ---------- Identification ----------
 
 const BookCandidate = z.object({
-  originalTitle: z.string().nullable().describe('عنوان اصلی اثر به زبان اصلی، فقط اگر مطمئنی'),
+  originalTitle: z.string().nullable().describe('عنوان اصلی اثر به زبان اصلی (برای کتاب تألیفی فارسی همان عنوان فارسی)، فقط اگر مطمئنی'),
   copyTitle: z.string().nullable().describe('عنوان روی همین نسخه، اگر در عکس خوانا است'),
   authors: z.array(z.string()),
   translators: z.array(z.string()),
@@ -180,7 +180,7 @@ export async function identifyBook(copyId: string, signal?: AbortSignal) {
   const images = await photoParts(copy.photoIds);
   const text = `این یک کتاب در مجموعهٔ کاربر است. عکس‌ها (اگر هست) جلد یا صفحهٔ شناسنامهٔ همین نسخه‌اند.
 اطلاعات فعلی:\n${describeBook(copy, work, false) || '(فقط عکس)'}
-نویسنده، مترجم، ناشر، شابک و اثر اصلی (عنوان به زبان اصلی) را پیشنهاد بده. کتاب‌ها اغلب ترجمهٔ فارسی‌اند.`;
+نویسنده، مترجم، ناشر، شابک و اثر اصلی (عنوان به زبان اصلی) را پیشنهاد بده. کتاب ممکن است ترجمه باشد یا تألیف فارسی؛ اگر تألیفی است، مترجم خالی است و عنوان اصلی همان عنوان فارسی است.`;
   const data = await provider.json({ system: IDENTIFY_RULES, parts: [...images, { type: 'text', text }], maxTokens: 6000 }, IdentifyResult(BookCandidate), signal);
   await db.bookCopies.update(copyId, { matchStatus: copy.matchStatus === 'confirmed' ? 'confirmed' : 'suggested' });
   return save({ kind: 'identify_book', targetType: 'book', targetId: copyId, model: provider.model, prompt: 'شناسایی کتاب', text: data.message, data });

@@ -113,8 +113,8 @@ export default function BookDetails() {
           <h1 className="text-3xl font-bold text-[#4F4839] leading-snug">{copy.title}</h1>
           {work?.authors.length ? <p className="text-lg text-[#8E3200] font-medium">{work.authors.join('، ')}</p> : null}
           <div className="flex items-center justify-center flex-wrap gap-2 text-sm text-gray-500">
-            {work?.title && <span className="ltr">{work.title}</span>}
-            {work?.title && copy.translators.length > 0 && <span className="w-1 h-1 bg-gray-300 rounded-full" />}
+            {work?.title && work.title !== copy.title && <span dir="auto">{work.title}</span>}
+            {work?.title && work.title !== copy.title && copy.translators.length > 0 && <span className="w-1 h-1 bg-gray-300 rounded-full" />}
             {copy.translators.length > 0 && <span>ترجمه {copy.translators.join('، ')}</span>}
           </div>
           {!copy.owned && (
@@ -565,12 +565,13 @@ export function MatchBadge({ status }: { status: MatchStatus }) {
   );
 }
 
-export function InfoRow({ label, value, source, ltr }: { label: string; value?: string; source?: Provenance[string]; ltr?: boolean }) {
+/** `auto` follows the value's own script: a title may be Persian or Latin. */
+export function InfoRow({ label, value, source, ltr, auto }: { label: string; value?: string; source?: Provenance[string]; ltr?: boolean; auto?: boolean }) {
   return (
     <div className="flex justify-between items-start gap-4 py-3 border-b border-[#EEE2D3]/60 last:border-0">
       <span className="text-xs text-gray-500 flex-shrink-0">{label}</span>
       <span className="text-left">
-        <span className={cx('text-sm font-bold text-[#4F4839] block', ltr && 'ltr')}>{value || <span className="text-gray-400 font-normal">نامشخص</span>}</span>
+        <span dir={auto ? 'auto' : undefined} className={cx('text-sm font-bold text-[#4F4839] block', ltr && 'ltr')}>{value || <span className="text-gray-400 font-normal">نامشخص</span>}</span>
         {value && source && <span className="text-[9px] text-[#8E3200]">{SOURCE_LABEL[source]}</span>}
       </span>
     </div>
@@ -588,7 +589,13 @@ function WorkTab({ work, copy, siblingCount }: { work?: BookWork; copy: BookCopy
             {siblingCount > 1 ? `${fa(siblingCount)} نسخه از این اثر` : 'نسخه‌ها و اتصال'}
           </button>
         </div>
-        <InfoRow label="عنوان اصلی" value={work?.title} source={work?.provenance.title} ltr />
+        {/* A book written in Persian is its own original: without a translator, the title on my copy is the original title. */}
+        <InfoRow
+          label="عنوان اصلی"
+          value={work?.title || (copy.translators.length ? undefined : copy.title)}
+          source={work?.title ? work.provenance.title : copy.provenance.title}
+          auto
+        />
         <InfoRow label="نویسنده" value={work?.authors.join('، ')} source={work?.provenance.authors} />
         <InfoRow label="نام‌های دیگر" value={work?.altTitles.join('، ')} source={work?.provenance.altTitles} />
         <InfoRow label="شناسه مرجع" value={work?.refId} source={work?.provenance.refId} ltr />
@@ -618,7 +625,7 @@ function CopyTab({ copy }: { copy: BookCopy }) {
     <section className="px-6 space-y-4">
       <div className="bg-white p-6 rounded-[2rem] border border-[#EEE2D3]">
         <InfoRow label="عنوان روی کتاب" value={copy.title} source={p.title} />
-        <InfoRow label="مترجم" value={copy.translators.join('، ')} source={p.translators} />
+        {copy.translators.length > 0 && <InfoRow label="مترجم" value={copy.translators.join('، ')} source={p.translators} />}
         <InfoRow label="ناشر" value={copy.publisher} source={p.publisher} />
         <InfoRow label="زبان" value={copy.language} source={p.language} />
         <InfoRow label="مشخصات انتشار" value={copy.publication} source={p.publication} />

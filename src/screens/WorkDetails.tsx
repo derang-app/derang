@@ -44,7 +44,11 @@ export default function WorkDetails() {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-[#4F4839]">{copies[0]?.title ?? title}</h2>
-            {work.title ? <p className="text-sm text-[#8E3200] font-medium ltr">{work.title}</p> : <p className="text-xs text-gray-500">عنوان اصلی ثبت نشده</p>}
+            {work.title && work.title !== copies[0]?.title ? (
+              <p dir="auto" className="text-sm text-[#8E3200] font-medium">{work.title}</p>
+            ) : !work.title && copies.some((c) => c.translators.length) ? (
+              <p className="text-xs text-gray-500">عنوان اصلی ثبت نشده</p>
+            ) : null}
             {work.authors.length > 0 && <p className="text-xs text-gray-500 mt-1">نویسنده: {work.authors.join('، ')}</p>}
           </div>
         </section>
