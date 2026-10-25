@@ -7,6 +7,7 @@ import { createGame } from '../db/games';
 import type { Edition, ReadStatus } from '../db/types';
 import { deletePhotos, importPhoto } from '../lib/images';
 import { useOnline } from '../lib/online';
+import { takeSharedImage } from '../lib/share';
 import { fa, joinNames, parseList, parseNum, parseRange, safeUrl, splitNames, toLatinDigits } from '../lib/text';
 import { COVER_ERROR_TEXT, CoverError, downloadImage, parseTaaghcheLink, taaghcheCoverUrl } from '../online/covers';
 import { fetchTaaghcheBook, taaghcheBookUrl, taaghchePublication } from '../online/taaghche';
@@ -31,6 +32,23 @@ export default function AddEntry() {
   const [kind, setKind] = useState<Kind>(params.get('type') === 'game' ? 'game' : 'book');
   const wish = params.get('wish') === '1';
   const [photoIds, setPhotoIds] = useState<string[]>([]);
+  // An image shared along with the text (see lib/share). With a Taaghche link the publisher's
+  // cover comes from Taaghche instead, so the image is only kept when there's no link.
+  useEffect(() => {
+    if (params.get('image') !== '1') return;
+    const t = setTimeout(async () => {
+      const blob = await takeSharedImage();
+      if (!blob || parseTaaghcheLink(params.get('share') ?? '')) return;
+      try {
+        const id = await importPhoto(blob);
+        setPhotoIds((ids) => [...ids, id]);
+      } catch {
+        toast('عکس به‌اشتراک‌گذاشته قابل خواندن نبود.', 'error');
+      }
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [ai, setAi] = useState(false);
   const [saving, setSaving] = useState(false);
 

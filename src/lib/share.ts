@@ -1,17 +1,44 @@
 // Android share sheet → Derang (Web Share Target, see the manifest's share_target).
-// Android opens the app at its start URL with ?title=&text=&url=; the Taaghche app puts
-// a sentence with the book link in `text`. Turn that into the add screen with the
-// shared text, so it can fetch the book right away.
+// The Taaghche app shares its "share image" together with a sentence holding the book
+// link, and Android only offers apps that accept every shared type, so the target takes
+// images as well as text. Shares are POSTed to SHARE_ACTION; the service worker keeps
+// any image in SHARE_CACHE and opens the add screen with the shared text, which then
+// fetches the book right away.
 
 export const SHARE_PARAMS = ['title', 'text', 'url'] as const;
+/** Relative to the app's base (manifest scope). */
+export const SHARE_ACTION = 'share-target';
+export const SHARE_CACHE = 'derang-share';
+export const SHARED_IMAGE_KEY = 'shared-image';
 
-/** Call once before the router starts: rewrites a share launch into `#/add?share=…`. */
+/** The add screen for a share, as a hash route. */
+export function shareRoute(text: string, image: boolean) {
+  const q = new URLSearchParams({ type: 'book', share: text.slice(0, 2000) });
+  if (image) q.set('image', '1');
+  return `#/add?${q}`;
+}
+
+/**
+ * Call once before the router starts. Installs made while the target was GET-only
+ * open the start URL with ?title=&text=&url=; rewrite that into the add screen.
+ */
 export function routeSharedText() {
   const q = new URLSearchParams(window.location.search);
   const shared = SHARE_PARAMS.map((k) => q.get(k)?.trim())
     .filter(Boolean)
     .join(' ');
   if (!shared) return;
-  const add = new URLSearchParams({ type: 'book', share: shared.slice(0, 2000) });
-  window.history.replaceState(null, '', `${window.location.pathname}#/add?${add}`);
+  window.history.replaceState(null, '', `${window.location.pathname}${shareRoute(shared, false)}`);
+}
+
+/** The image that came with the last share, once (it's removed as it's read). */
+export async function takeSharedImage(): Promise<Blob | undefined> {
+  try {
+    const cache = await caches.open(SHARE_CACHE);
+    const res = await cache.match(SHARED_IMAGE_KEY);
+    await cache.delete(SHARED_IMAGE_KEY);
+    return res ? await res.blob() : undefined;
+  } catch {
+    return undefined;
+  }
 }

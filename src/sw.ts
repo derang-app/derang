@@ -2,13 +2,42 @@
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { DerangDB } from './db/db';
 import { REMINDER_TAG } from './lib/reminderTag';
+import { SHARE_ACTION, SHARE_CACHE, SHARE_PARAMS, SHARED_IMAGE_KEY, shareRoute } from './lib/share';
 
 declare const self: ServiceWorkerGlobalScope;
 
+// A share from another app (see lib/share): keep the image, open the add screen with the text.
+async function receiveShare(request: Request) {
+  const scope = self.registration.scope;
+  let text = '';
+  let image = false;
+  try {
+    const form = await request.formData();
+    text = SHARE_PARAMS.map((k) => form.get(k))
+      .filter((v): v is string => typeof v === 'string' && !!v.trim())
+      .join(' ');
+    const file = form.getAll('image').find((f): f is File => f instanceof File && f.type.startsWith('image/') && f.size < 20_000_000);
+    if (file) {
+      await (await caches.open(SHARE_CACHE)).put(SHARED_IMAGE_KEY, new Response(file, { headers: { 'Content-Type': file.type } }));
+      image = true;
+    }
+  } catch {
+    // Unreadable share: still open the add screen.
+  }
+  return Response.redirect(`${scope}${shareRoute(text, image)}`, 303);
+}
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method === 'POST' && new URL(request.url).href === new URL(SHARE_ACTION, self.registration.scope).href) {
+    event.respondWith(receiveShare(request));
+  }
+});
+
 // Offline: precache the whole app shell. Updates activate immediately so a new
 // deploy reaches the phone on the next launch.
-// A share from another app opens the start URL with ?title=&text=&url= (see lib/share);
-// it's still the precached app shell, so it works offline too.
+// A share from an install made while the share target was GET-only opens the start URL
+// with ?title=&text=&url= (see lib/share); it's still the precached app shell.
 // The web manifest stays network-only: Chrome reads it when installing and updating the
 // installed app, and a cached old copy would hide new features such as the share target.
 // (vite-plugin-pwa always adds it to the list, so it's filtered out here.)

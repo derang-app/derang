@@ -37,8 +37,14 @@ export default defineConfig({
         start_url: base,
         scope: base,
         related_applications: [{ platform: 'webapp', url: `${site}${base}manifest.webmanifest` }],
-        // Shows Derang in Android's share sheet (e.g. «اشتراک‌گذاری» in Taaghche); handled in src/lib/share.ts.
-        share_target: { action: base, method: 'GET', params: { title: 'title', text: 'text', url: 'url' } },
+        // Shows Derang in Android's share sheet (e.g. «اشتراک‌گذاری» in Taaghche, which shares an
+        // image with the link text); received in src/sw.ts, see src/lib/share.ts.
+        share_target: {
+          action: `${base}share-target`,
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: { title: 'title', text: 'text', url: 'url', files: [{ name: 'image', accept: ['image/*', '.jpg', '.jpeg', '.png', '.webp'] }] },
+        },
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#FFF9F0',
