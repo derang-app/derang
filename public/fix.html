@@ -83,6 +83,12 @@
         <button id="go" type="button">دریافت دوبارهٔ نسخهٔ تازه</button>
       </div>
       <div class="card">
+        <p>بررسی اطلاعات ذخیره‌شده: هر بخش را جدا می‌خواند و می‌گوید کدام جواب نمی‌دهد. چیزی پاک یا عوض نمی‌شود.</p>
+        <p class="muted">قبل از این بررسی، برنامهٔ درنگ را کامل ببند (از فهرست برنامه‌های باز هم کنار بزن).</p>
+        <button id="check" type="button">بررسی دوباره</button>
+        <pre id="db" style="margin-top: 1rem">در حال بررسی…</pre>
+      </div>
+      <div class="card">
         <p>وضعیت فعلی (اگر مشکل ماند، از این بخش عکس بگیر و بفرست):</p>
         <pre id="log">در حال بررسی…</pre>
       </div>
@@ -136,6 +142,66 @@
         }
       });
 
+      // Read-only, raw IndexedDB (no app code): one transaction per table, each with its own
+      // timeout, so a table locked by a stuck write shows up as "TIMEOUT" while the rest answer.
+      const dbLog = document.getElementById('db');
+      const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT ' + ms + 'ms')), ms))]);
+      const req = (r) => new Promise((res, rej) => ((r.onsuccess = () => res(r.result)), (r.onerror = () => rej(r.error))));
+
+      async function checkDb() {
+        const out = [];
+        const put = (s) => {
+          out.push(s);
+          dbLog.textContent = out.join('\n');
+        };
+        put('time: ' + new Date().toISOString());
+        try {
+          const est = await navigator.storage.estimate();
+          put('storage: used ' + Math.round(est.usage / 1048576) + ' MB of ' + Math.round(est.quota / 1048576) + ' MB');
+          put('persisted: ' + (navigator.storage.persisted ? await navigator.storage.persisted() : '?'));
+        } catch (e) {
+          put('storage: ' + e);
+        }
+        let idb;
+        try {
+          idb = await withTimeout(
+            new Promise((res, rej) => {
+              const r = indexedDB.open('derang');
+              r.onsuccess = () => res(r.result);
+              r.onerror = () => rej(r.error);
+              r.onblocked = () => put('open: BLOCKED (another window holds the database)');
+              // No database yet: don't create an empty one behind the app's back.
+              r.onupgradeneeded = () => r.transaction.abort();
+            }),
+            8000,
+          );
+          put('open: ok, version ' + idb.version);
+        } catch (e) {
+          return put('open: ' + e);
+        }
+        for (const name of idb.objectStoreNames) {
+          const t0 = performance.now();
+          try {
+            const count = await withTimeout(req(idb.transaction(name, 'readonly').objectStore(name).count()), 5000);
+            put(name + ': ' + count + ' (' + Math.round(performance.now() - t0) + ' ms)');
+          } catch (e) {
+            put(name + ': ' + (e && (e.name + ' ' + e.message)));
+          }
+        }
+        // A tiny write to the settings table, which is known to work in the app.
+        if (idb.objectStoreNames.contains('kv')) try {
+          const tx = idb.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put({ key: '__fixcheck', value: Date.now() });
+          await withTimeout(new Promise((res, rej) => ((tx.oncomplete = res), (tx.onerror = () => rej(tx.error)), (tx.onabort = () => rej(tx.error)))), 5000);
+          put('write kv: ok');
+        } catch (e) {
+          put('write kv: ' + (e && (e.name + ' ' + e.message)));
+        }
+        idb.close();
+      }
+
+      document.getElementById('check').addEventListener('click', () => checkDb().catch((e) => (dbLog.textContent += '\nerror: ' + e)));
+      checkDb().catch((e) => (dbLog.textContent += '\nerror: ' + e));
       status().catch((e) => say('error: ' + e));
     </script>
   </body>
