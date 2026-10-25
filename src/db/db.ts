@@ -118,5 +118,33 @@ export async function isConnected(ms = 3000) {
   }
 }
 
+/**
+ * Android freezes a copy of the app soon after it leaves the screen. A copy frozen in the
+ * middle of a database read keeps its lock, and every save in the copy you are using then
+ * waits forever behind it (a second copy appears e.g. with a share from Taaghche, or with
+ * the app also open in a Chrome tab). Dexie re-reads in every copy whenever any copy saves,
+ * so a background copy is reading exactly when the visible one writes.
+ * So a hidden copy lets go of the database: Dexie's own back/forward-cache handling (a
+ * "persisted" pagehide) closes the connection and stops listening to other copies. Dexie
+ * would reopen on the next read, so auto-open is switched off too; live queries treat the
+ * closed database as "no news" and keep showing what they had. Back on screen, the database
+ * reopens and the matching pageshow re-reads every live query. Nothing remounts, so a
+ * half-filled form survives a trip to the gallery.
+ */
+export function releaseWhileHidden() {
+  let released = false;
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'hidden' && !released) {
+      released = true;
+      window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+      db.close({ disableAutoOpen: true });
+    } else if (document.visibilityState === 'visible' && released) {
+      released = false;
+      await db.open().catch(() => undefined);
+      window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    }
+  });
+}
+
 export const newId = () => crypto.randomUUID();
 export const now = () => Date.now();

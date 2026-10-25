@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App';
-import { isConnected } from './db/db';
+import { releaseWhileHidden } from './db/db';
 import { collectOrphanPhotos, requestPersistence } from './lib/startup';
 import { captureInstallPrompt } from './lib/install';
 import { routeSharedText } from './lib/share';
@@ -50,6 +50,6 @@ if (import.meta.env.PROD) {
     },
   });
 }
-document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && isConnected());
+releaseWhileHidden();
 requestPersistence();
 setTimeout(() => collectOrphanPhotos().catch(() => undefined), 5000);

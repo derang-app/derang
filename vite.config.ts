@@ -45,6 +45,9 @@ export default defineConfig({
           enctype: 'multipart/form-data',
           params: { title: 'title', text: 'text', url: 'url', files: [{ name: 'image', accept: ['image/*', '.jpg', '.jpeg', '.png', '.webp'] }] },
         },
+        // A share or a launch reuses the open window instead of starting a second copy of the app,
+        // which could hold the database while Android keeps it frozen in the background.
+        launch_handler: { client_mode: ['navigate-existing', 'auto'] },
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#FFF9F0',
