@@ -10,14 +10,20 @@ export interface NewBookInput {
   owned?: boolean;
   photoIds?: string[];
   note?: string;
+  translators?: string[];
+  publisher?: string;
+  publication?: string;
+  refUrl?: string;
+  /** Fields that came from an online source (e.g. Taaghche) rather than the user. */
+  online?: string[];
   /** Attach to an existing work instead of creating a new one. */
   workId?: string;
 }
 
-function manualProv(values: Record<string, unknown>): Record<string, Source> {
+function manualProv(values: Record<string, unknown>, online: string[] = []): Record<string, Source> {
   const prov: Record<string, Source> = {};
   for (const [k, v] of Object.entries(values)) {
-    if (v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0)) prov[k] = 'manual';
+    if (v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0)) prov[k] = online.includes(k) ? 'online' : 'manual';
   }
   return prov;
 }
@@ -33,7 +39,8 @@ export async function createBook(input: NewBookInput): Promise<BookCopy> {
         id: newId(),
         authors,
         altTitles: [],
-        provenance: manualProv({ authors }),
+        refUrl: input.refUrl,
+        provenance: manualProv({ authors, refUrl: input.refUrl }, input.online),
         createdAt: t,
         updatedAt: t,
       };
@@ -45,13 +52,18 @@ export async function createBook(input: NewBookInput): Promise<BookCopy> {
       id: newId(),
       workId,
       title: input.title.trim(),
-      translators: [],
+      translators: input.translators ?? [],
+      publisher: input.publisher || undefined,
+      publication: input.publication || undefined,
       pageCount: input.pageCount,
       photoIds: input.photoIds ?? [],
       owned: input.owned ?? true,
       status,
       matchStatus: 'unidentified',
-      provenance: manualProv({ title: input.title, pageCount: input.pageCount }),
+      provenance: manualProv(
+        { title: input.title, translators: input.translators, publisher: input.publisher, publication: input.publication, pageCount: input.pageCount },
+        input.online,
+      ),
       createdAt: t,
       updatedAt: t,
     };

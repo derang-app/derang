@@ -352,6 +352,7 @@ function TaaghcheSection({ title, online, busy, onFetch }: { title: string; onli
     <section className="space-y-4">
       <SectionTitle>جلد از طاقچه</SectionTitle>
       <form
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           if (id) onFetch(id);
