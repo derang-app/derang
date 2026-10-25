@@ -9,7 +9,11 @@ declare const self: ServiceWorkerGlobalScope;
 // deploy reaches the phone on the next launch.
 // A share from another app opens the start URL with ?title=&text=&url= (see lib/share);
 // it's still the precached app shell, so it works offline too.
-precacheAndRoute(self.__WB_MANIFEST, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^(title|text|url)$/] });
+// The web manifest stays network-only: Chrome reads it when installing and updating the
+// installed app, and a cached old copy would hide new features such as the share target.
+// (vite-plugin-pwa always adds it to the list, so it's filtered out here.)
+const precache = self.__WB_MANIFEST.filter((e) => !(typeof e === 'string' ? e : e.url).endsWith('.webmanifest'));
+precacheAndRoute(precache, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^(title|text|url)$/] });
 cleanupOutdatedCaches();
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));

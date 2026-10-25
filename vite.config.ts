@@ -24,7 +24,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: false,
       // fix.html stays network-only so it still loads on a phone stuck on an old cached version.
-      injectManifest: { globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico,webmanifest}'], globIgnores: ['fix.html'] },
+      // (The web manifest is left out of the precache in sw.ts.)
+      injectManifest: { globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico}'], globIgnores: ['fix.html'] },
       manifest: {
         name: 'درنگ',
         short_name: 'درنگ',
