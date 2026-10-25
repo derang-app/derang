@@ -8,7 +8,7 @@ import { useSetting } from '../db/settings';
 import { ME, type MyResult } from '../db/types';
 import { relativeDays, startOfDay } from '../lib/date';
 import { fa, parseNum } from '../lib/text';
-import { JalaliField } from '../ui/fields';
+import { Choice, JalaliField } from '../ui/fields';
 import { BackButton, BottomAction, cx, Icon, Loading, PhotoImg, PrimaryButton, useFlight } from '../ui/kit';
 import { Sheet, useOverlay } from '../ui/overlay';
 import { NotFound } from './BookDetails';
@@ -135,12 +135,18 @@ export default function LogSession() {
             </label>
             <label className="space-y-2 block">
               <span className="text-[10px] font-bold text-[#8E3200] uppercase pr-2">نتیجهٔ من</span>
-              <select value={result} onChange={(e) => setResult(e.target.value as MyResult)} className="input-soft appearance-none">
-                <option value="win">برد</option>
-                <option value="loss">باخت</option>
-                <option value="draw">مساوی</option>
-                <option value="unknown">ثبت نمی‌کنم</option>
-              </select>
+              <Choice<MyResult>
+                label="نتیجهٔ من"
+                value={result}
+                onChange={setResult}
+                options={[
+                  ['win', 'برد'],
+                  ['loss', 'باخت'],
+                  ['draw', 'مساوی'],
+                  ['unknown', 'ثبت نمی‌کنم'],
+                ]}
+                className="input-soft"
+              />
             </label>
           </div>
           <JalaliField label="تاریخ بازی" value={at} onChange={setAt} soft />

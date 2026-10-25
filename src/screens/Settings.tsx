@@ -10,7 +10,7 @@ import { useInstallState } from '../lib/install';
 import { formatJalali } from '../lib/date';
 import { fa } from '../lib/text';
 import { BGG_APPLICATIONS_URL, BGG_ERROR_TEXT, BGG_SECRET, BggError, searchBgg } from '../online/bgg';
-import { TextField } from '../ui/fields';
+import { Choice, TextField } from '../ui/fields';
 import { cx, Icon, Loading, PageHeader, PhotoImg, PrimaryButton, Toggle, useFlight } from '../ui/kit';
 import { useOverlay } from '../ui/overlay';
 import { HiddenInputs, usePhotoImport } from '../ui/PhotoPicker';
@@ -91,18 +91,14 @@ export default function Settings() {
             {reminder.enabled && (
               <div className="settings-item">
                 <span className="text-sm font-bold">ساعت تقریبی یادآوری</span>
-                <select
-                  aria-label="ساعت یادآوری"
+                <Choice<number>
+                  label="ساعت یادآوری"
                   value={reminder.hour}
-                  onChange={(e) => setSetting('reminder', { hour: Number(e.target.value) })}
-                  className="bg-[#FFF9F0] border border-[#EEE2D3] rounded-xl px-3 py-2 text-sm"
-                >
-                  {Array.from({ length: 24 }, (_, h) => (
-                    <option key={h} value={h}>
-                      {fa(h)}:۰۰
-                    </option>
-                  ))}
-                </select>
+                  onChange={(hour) => setSetting('reminder', { hour })}
+                  options={Array.from({ length: 24 }, (_, h) => [h, `${fa(h)}:۰۰`] as [number, string])}
+                  columns={4}
+                  className="bg-[#FFF9F0] border border-[#EEE2D3] rounded-xl px-3 py-2 text-sm min-w-24"
+                />
               </div>
             )}
           </Group>

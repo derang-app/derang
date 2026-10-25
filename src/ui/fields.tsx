@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { formatJalali, parseJalali } from '../lib/date';
 import { cx, Icon } from './kit';
+import { Sheet } from './overlay';
 
 export function Field({ label, children, hint }: { label: string; children: (id: string) => ReactNode; hint?: string }) {
   const id = useId();
@@ -77,19 +78,90 @@ export function SelectField<T extends string>({
 }) {
   return (
     <Field label={label}>
-      {(id) => (
-        <div className="relative">
-          <select id={id} value={value} onChange={(e) => onChange(e.target.value as T)} className="input-field appearance-none">
-            {options.map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
-          <Icon name="fa-chevron-down" className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none" />
-        </div>
-      )}
+      {(id) => <Choice id={id} label={label} value={value} onChange={onChange} options={options} className="input-field" />}
     </Field>
+  );
+}
+
+/**
+ * Dropdown replacement: a field-styled button that opens a bottom sheet of options
+ * (the sort sheet's settings-item rows) instead of the platform's native picker.
+ */
+export function Choice<T extends string | number>({
+  id,
+  label,
+  value,
+  onChange,
+  options,
+  className,
+  columns,
+}: {
+  id?: string;
+  label: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: [T, string][];
+  className: string;
+  /** Lay short options out as a grid of chips instead of full-width rows. */
+  columns?: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = options.find(([v]) => v === value)?.[1] ?? '';
+  const pick = (v: T) => {
+    onChange(v);
+    setOpen(false);
+  };
+  return (
+    <>
+      <button
+        id={id}
+        type="button"
+        aria-label={id ? undefined : label}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+        className={cx(className, 'relative flex items-center justify-between gap-2 text-right')}
+      >
+        <span className="truncate">{current}</span>
+        <Icon name="fa-chevron-down" className="text-[10px] text-gray-400 flex-shrink-0" />
+      </button>
+      <Sheet open={open} onClose={() => setOpen(false)} label={label}>
+        <h2 className="text-lg font-bold text-center mb-6">{label}</h2>
+        {columns ? (
+          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+            {options.map(([v, l]) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={v === value}
+                onClick={() => pick(v)}
+                className={cx(
+                  'py-3 rounded-2xl text-sm font-bold border min-h-11',
+                  v === value ? 'bg-[#8E3200] border-[#8E3200] text-white shadow-lg shadow-[#8E3200]/20' : 'bg-white border-[#EEE2D3] text-[#4F4839]',
+                )}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {options.map(([v, l]) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={v === value}
+                onClick={() => pick(v)}
+                className={cx('settings-item', v === value && 'border-[#8E3200]')}
+              >
+                <span className="text-sm font-bold">{l}</span>
+                {v === value && <Icon name="fa-check" className="text-[#8E3200]" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </Sheet>
+    </>
   );
 }
 
