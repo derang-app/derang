@@ -1,4 +1,4 @@
-import { db, newId, now } from '../db/db';
+import { db, newId, now, wake } from '../db/db';
 import type { Photo } from '../db/types';
 
 const FULL_MAX = 1600;
@@ -45,6 +45,7 @@ export async function importPhoto(file: Blob): Promise<string> {
 export async function savePhoto(source: Source): Promise<string> {
   const full = await encode(source, FULL_MAX, 0.85);
   const thumb = await encode(source, THUMB_MAX, 0.8);
+  await wake();
   const photo: Photo = {
     id: newId(),
     blob: full.blob,

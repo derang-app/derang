@@ -131,19 +131,30 @@ export async function isConnected(ms = 3000) {
  * reopens and the matching pageshow re-reads every live query. Nothing remounts, so a
  * half-filled form survives a trip to the gallery.
  */
+let released = false;
+
 export function releaseWhileHidden() {
-  let released = false;
-  document.addEventListener('visibilitychange', async () => {
+  document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden' && !released) {
       released = true;
       window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
       db.close({ disableAutoOpen: true });
-    } else if (document.visibilityState === 'visible' && released) {
-      released = false;
-      await db.open().catch(() => undefined);
-      window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    } else if (document.visibilityState === 'visible') {
+      void wake();
     }
   });
+}
+
+/**
+ * Reopen the database if it was let go while hidden. A photo from the camera (or a shared
+ * image) can arrive before the page reports itself visible again; with auto-open off its
+ * save would then fail at once, so saves that can come back from another app call this first.
+ */
+export async function wake() {
+  if (!released) return;
+  released = false;
+  await db.open().catch(() => undefined);
+  window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
 }
 
 export const newId = () => crypto.randomUUID();
