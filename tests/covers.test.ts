@@ -5,7 +5,7 @@ import { setCover } from '../src/lib/cover';
 import { defaultQuad, enhance, isUsableQuad, outputSize, squareToQuad, warp, type Quad } from '../src/lib/scan';
 import { parseThing, parseXml } from '../src/online/bgg';
 import { guideInShot } from '../src/ui/ScannerCamera';
-import { coverPrompt, parseTaaghcheLink, readableImageUrl, taaghcheCoverUrl } from '../src/online/covers';
+import { coverPrompt, parseImageLink, parseTaaghcheLink, readableImageUrl, taaghcheCoverUrl } from '../src/online/covers';
 
 describe('perspective warp', () => {
   const quad: Quad = [
@@ -125,15 +125,26 @@ describe('Taaghche links', () => {
 });
 
 describe('ChatGPT prompt', () => {
-  it('includes the known details and the app’s image standard', () => {
+  it('includes the known details and asks only for a link, not a drawn cover', () => {
     const p = coverPrompt({ kind: 'book', title: 'قلعهٔ حیوانات', originalTitle: 'Animal Farm', authors: ['George Orwell'], translators: [], isbn: '978' });
     expect(p).toContain('قلعهٔ حیوانات');
     expect(p).toContain('Animal Farm');
-    expect(p).toContain('2:3');
+    expect(p).toContain('DIRECT address');
+    expect(p).not.toContain('reproduce');
     expect(p).not.toContain('Translator');
     const g = coverPrompt({ kind: 'game', title: 'کاتان', originalTitle: 'CATAN' });
-    expect(g).toContain('1:1');
     expect(g).toContain('CATAN');
+    expect(g).toContain('DIRECT address');
+  });
+});
+
+describe('image link', () => {
+  it('finds the address inside a pasted answer', () => {
+    expect(parseImageLink('https://example.com/a.jpg')).toBe('https://example.com/a.jpg');
+    expect(parseImageLink('لینک عکس: [جلد](https://cdn.example.ir/covers/12.webp).')).toBe('https://cdn.example.ir/covers/12.webp');
+    expect(parseImageLink('https://example.com/a.jpg،')).toBe('https://example.com/a.jpg');
+    expect(parseImageLink('http://example.com/a.jpg')).toBeUndefined();
+    expect(parseImageLink('چیزی نیست')).toBeUndefined();
   });
 });
 

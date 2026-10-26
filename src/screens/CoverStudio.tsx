@@ -10,7 +10,7 @@ import { useOnline } from '../lib/online';
 import { fa } from '../lib/text';
 import { defaultQuad, enhance, isUsableQuad, outputSize, sharpen, warp, type Quad } from '../lib/scan';
 import { BGG_ERROR_TEXT, BGG_SECRET, BggError, fetchBggGame } from '../online/bgg';
-import { chatGptUrl, COVER_ERROR_TEXT, CoverError, coverPrompt, downloadImage, parseTaaghcheLink, taaghcheCoverUrl, type PromptInfo } from '../online/covers';
+import { chatGptUrl, COVER_ERROR_TEXT, CoverError, coverPrompt, downloadImage, parseImageLink, parseTaaghcheLink, taaghcheCoverUrl, type PromptInfo } from '../online/covers';
 import { CornerEditor } from '../ui/CornerEditor';
 import { ScannerCamera } from '../ui/ScannerCamera';
 import { BottomAction, cx, Icon, Loading, PageHeader, PhotoImg, PrimaryButton, Spinner, Toggle } from '../ui/kit';
@@ -22,8 +22,8 @@ import { NotFound } from './BookDetails';
 const WORK_MAX = 2200;
 const COVER_MAX = 1600;
 
-type From = 'scan' | 'online' | 'chatgpt';
-type Busy = 'scan' | 'taaghche' | 'bgg' | 'chatgpt' | 'save';
+type From = 'scan' | 'online';
+type Busy = 'scan' | 'taaghche' | 'bgg' | 'link' | 'save';
 
 type Step =
   | { kind: 'home' }
@@ -53,7 +53,7 @@ async function fileToCanvas(file: Blob, max: number) {
 
 /**
  * One place to get a good cover: scan my own copy (straightened and cleaned up),
- * a game's box art from BGG, or ask ChatGPT for one with a ready-made prompt.
+ * a game's box art from BGG, or any image link (ChatGPT can find one with a ready-made prompt).
  */
 export default function CoverStudio() {
   const { kind: rawKind, id } = useParams();
@@ -121,8 +121,24 @@ export default function CoverStudio() {
       await showPreview(await fileToCanvas(await downloadImage(g.image), COVER_MAX), 'online');
     });
 
-  const fromChatGpt = (files: FileList | null) =>
-    files?.[0] && guard('chatgpt', async () => showPreview(await fileToCanvas(files[0], COVER_MAX), 'chatgpt'));
+  const fromLink = (url: string) => {
+    const taaghche = parseTaaghcheLink(url);
+    if (taaghche) return fromTaaghche(taaghche);
+    return guard('link', async () => {
+      let blob: Blob;
+      try {
+        blob = await downloadImage(url);
+      } catch (e) {
+        // Usually the page's address instead of the image's own.
+        if (e instanceof CoverError && e.code !== 'offline') {
+          toast('از این لینک عکسی دریافت نشد. باید آدرس خود عکس باشد: روی عکس نگه دار و «کپی آدرس تصویر» را بزن.', 'error');
+          return;
+        }
+        throw e;
+      }
+      await showPreview(await fileToCanvas(blob, COVER_MAX), 'online');
+    });
+  };
 
   // Leave the studio: first drop the step's history entry, then go back past the studio itself.
   const leave = () => {
@@ -196,7 +212,7 @@ export default function CoverStudio() {
           onGallery={() => galleryRef.current?.click()}
           onTaaghche={fromTaaghche}
           onBgg={fromBgg}
-          onChatGpt={fromChatGpt}
+          onLink={fromLink}
           onLinkBgg={() => navigate(`/games/${copy.id}/bgg`)}
         />
       )}
@@ -207,7 +223,7 @@ export default function CoverStudio() {
           onSave={save}
           onRecrop={async () => {
             const source = step.source ?? step.canvas;
-            // A finished image (online or ChatGPT) starts from its full frame.
+            // A finished image from the web starts from its full frame.
             setStep({ kind: 'corners', source, url: await displayUrl(source), quad: step.quad ?? defaultQuad(source.width, source.height, 0.02) });
           }}
           onRedo={async (enhanced) => {
@@ -253,7 +269,7 @@ function Home({
   onGallery,
   onTaaghche,
   onBgg,
-  onChatGpt,
+  onLink,
   onLinkBgg,
 }: {
   kind: CoverKind;
@@ -264,19 +280,15 @@ function Home({
   onGallery: () => void;
   onTaaghche: (bookId: string) => void;
   onBgg: (bggId: string) => void;
-  onChatGpt: (f: FileList | null) => void;
+  onLink: (url: string) => void;
   onLinkBgg: () => void;
 }) {
-  const chatRef = useRef<HTMLInputElement>(null);
-  const chatCameraRef = useRef<HTMLInputElement>(null);
   const copy = data.copy;
   const isBook = kind === 'book';
   const cover = copy.photoIds[0];
 
   return (
     <main className="px-6 space-y-10 mt-4">
-      <HiddenInputs onFiles={onChatGpt} cameraRef={chatCameraRef} galleryRef={chatRef} />
-
       {/* Current cover, framed like the identification results header. */}
       <div className="space-y-3">
         <div className="relative w-full aspect-video rounded-[2.5rem] overflow-hidden shadow-inner bg-[#EEE2D3]">
@@ -326,7 +338,7 @@ function Home({
 
       {!isBook && <BggSection data={data as NonNullable<ReturnType<typeof useGame>>} online={online} busy={busy === 'bgg'} onBgg={onBgg} onLinkBgg={onLinkBgg} />}
 
-      <ChatGptSection kind={kind} data={data} busy={busy === 'chatgpt'} onPick={() => chatRef.current?.click()} />
+      <ChatGptSection kind={kind} data={data} online={online} busy={busy === 'link'} onFetch={onLink} />
     </main>
   );
 }
@@ -469,9 +481,11 @@ function promptInfo(kind: CoverKind, data: Data): PromptInfo {
   return { kind, title: copy.name, originalTitle: work?.name, edition: copy.edition ? EDITION_EN[copy.edition] : undefined, refUrl: work?.refUrl };
 }
 
-function ChatGptSection({ kind, data, busy, onPick }: { kind: CoverKind; data: Data; busy: boolean; onPick: () => void }) {
+function ChatGptSection({ kind, data, online, busy, onFetch }: { kind: CoverKind; data: Data; online: boolean; busy: boolean; onFetch: (url: string) => void }) {
   const { toast } = useOverlay();
   const [show, setShow] = useState(false);
+  const [link, setLink] = useState('');
+  const url = parseImageLink(link);
   const prompt = coverPrompt(promptInfo(kind, data));
 
   const open = async () => {
@@ -486,50 +500,90 @@ function ChatGptSection({ kind, data, busy, onPick }: { kind: CoverKind; data: D
     if (!copied) setShow(true);
   };
 
+  const paste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setLink(text);
+      const found = parseImageLink(text);
+      if (found) onFetch(found);
+      else toast('در متن کپی‌شده لینکی پیدا نشد', 'error');
+    } catch {
+      toast('دسترسی به متن کپی‌شده داده نشد؛ لینک را در کادر بچسبان', 'error');
+    }
+  };
+
   return (
     <section className="space-y-4">
-      <SectionTitle>ساخت با ChatGPT</SectionTitle>
-      <div className="backup-card shadow-sm space-y-4">
+      <SectionTitle>جلد از لینک عکس</SectionTitle>
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (url) onFetch(url);
+        }}
+        className="backup-card shadow-sm space-y-4"
+      >
         <ol className="space-y-3 text-[12px] leading-relaxed text-[#4F4839] list-[persian] pr-5">
-          <li>متن آماده با مشخصات این {kind === 'book' ? 'کتاب' : 'بازی'} و استاندارد تصویر اپ کپی می‌شود و ChatGPT باز می‌شود.</li>
-          <li>ChatGPT جلد واقعی را جستجو می‌کند و یک تصویر صاف و تمام‌کادر می‌سازد؛ آن را در گوشی ذخیره کن.</li>
-          <li>برگرد و تصویر را از گالری انتخاب کن.</li>
+          <li>متن آماده با مشخصات این {kind === 'book' ? 'کتاب' : 'بازی'} کپی می‌شود و ChatGPT باز می‌شود.</li>
+          <li>ChatGPT {kind === 'book' ? 'جلد همین چاپ' : 'تصویر جعبه'} را در سایت‌ها پیدا می‌کند و لینک خود عکس را می‌دهد.</li>
+          <li>لینک را کپی کن و این‌جا بچسبان. لینک عکس از هر سایت دیگری هم کار می‌کند.</li>
         </ol>
         <button
           type="button"
           onClick={open}
-          className="w-full bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-[#8E3200]/20 flex items-center justify-center gap-2 min-h-11"
+          className="w-full bg-white border border-[#EEE2D3] text-[#4F4839] py-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 min-h-11"
         >
-          <Icon name="fa-copy" />
+          <Icon name="fa-copy" className="text-[#D7A86E]" />
           <span>کپی متن و باز کردن ChatGPT</span>
         </button>
-        <button
-          type="button"
-          onClick={onPick}
-          disabled={busy}
-          className="w-full bg-white border border-[#EEE2D3] text-[#4F4839] py-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 min-h-11 disabled:opacity-60"
-        >
-          {busy ? <Spinner /> : <Icon name="fa-images" className="text-[#D7A86E]" />}
-          <span>انتخاب تصویر ساخته‌شده</span>
-        </button>
-      </div>
+        <div className="space-y-2">
+          <label htmlFor="image-link" className="field-label block">
+            لینک عکس جلد
+          </label>
+          <input
+            id="image-link"
+            type="url"
+            inputMode="url"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder="https://…/cover.jpg"
+            dir="ltr"
+            className="input-field text-left"
+          />
+          {link.trim() && !url && <p className="text-[10px] text-[#8E3200] pr-4 leading-relaxed">لینک باید با https:// شروع شود.</p>}
+        </div>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={paste}
+            disabled={!online || busy}
+            className="flex-1 bg-white border border-[#EEE2D3] text-[#4F4839] py-4 rounded-2xl font-bold text-xs shadow-sm min-h-11 disabled:opacity-60"
+          >
+            چسباندن لینک
+          </button>
+          <button
+            type="submit"
+            disabled={!online || !url || busy}
+            className="flex-[2] bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-[#8E3200]/20 flex items-center justify-center gap-2 min-h-11 disabled:opacity-60"
+          >
+            {busy ? <Spinner /> : <Icon name="fa-cloud-arrow-down" />}
+            <span>دریافت جلد</span>
+          </button>
+        </div>
+        {!online && <p className="text-[11px] text-[#8E3200] text-center">{COVER_ERROR_TEXT.offline}</p>}
+      </form>
       <button type="button" onClick={() => setShow((s) => !s)} className="w-full text-xs font-bold text-gray-500 py-2 min-h-11">
         <Icon name={show ? 'fa-chevron-up' : 'fa-chevron-down'} className="ml-1" /> {show ? 'پنهان کردن متن درخواست' : 'دیدن متن درخواست'}
       </button>
       {show && (
-        <>
-          <textarea
-            readOnly
-            value={prompt}
-            dir="ltr"
-            onFocus={(e) => e.currentTarget.select()}
-            className="input-soft h-56 resize-none leading-relaxed text-left"
-            aria-label="متن درخواست برای ChatGPT"
-          />
-          <p className="text-[10px] text-gray-500 pr-4 leading-relaxed">
-            متن انگلیسی است چون مدل‌های تصویر دستور چیدمان را به انگلیسی دقیق‌تر اجرا می‌کنند؛ مشخصات کتاب به همان زبان خودش می‌ماند. ChatGPT گاهی نوشتهٔ فارسی را خراب می‌کشد؛ قبل از ذخیره نگاه کن.
-          </p>
-        </>
+        <textarea
+          readOnly
+          value={prompt}
+          dir="ltr"
+          onFocus={(e) => e.currentTarget.select()}
+          className="input-soft h-56 resize-none leading-relaxed text-left"
+          aria-label="متن درخواست برای ChatGPT"
+        />
       )}
     </section>
   );
@@ -705,14 +759,12 @@ function Preview({
         <div className="bg-[#D7A86E]/10 p-5 rounded-[2rem] border border-[#D7A86E]/20">
           <div className="flex items-center gap-3 mb-2">
             <Icon name={small ? 'fa-triangle-exclamation' : 'fa-circle-info'} className="text-[#8E3200]" />
-            <h2 className="text-sm font-bold text-[#8E3200]">{small ? 'تصویر کوچک است' : step.from === 'online' ? 'تصویر از منبع آنلاین' : 'تصویر ساختهٔ ChatGPT'}</h2>
+            <h2 className="text-sm font-bold text-[#8E3200]">{small ? 'تصویر کوچک است' : 'تصویر از منبع آنلاین'}</h2>
           </div>
           <p className="text-[12px] leading-relaxed text-[#433520]">
             {small
               ? 'روی صفحه کمی تار دیده می‌شود. اگر منبع دیگری با کیفیت بهتر هست، آن را امتحان کن.'
-              : step.from === 'online'
-                ? 'اگر حاشیه یا پس‌زمینه دارد، «برش و صاف کردن» را بزن.'
-                : 'نوشته‌های روی تصویر را با جلد واقعی مقایسه کن. اگر حاشیه دارد، «برش و صاف کردن» را بزن.'}
+              : 'اگر حاشیه یا پس‌زمینه دارد، «برش و صاف کردن» را بزن.'}
           </p>
         </div>
       )}
