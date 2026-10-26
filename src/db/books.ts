@@ -13,7 +13,16 @@ export interface NewBookInput {
   translators?: string[];
   publisher?: string;
   publication?: string;
+  language?: string;
+  isbn?: string;
+  startedAt?: number;
+  finishedAt?: number;
+  rating?: number;
+  /** Original work: title in its own language, other names, reference link and id. */
+  workTitle?: string;
+  altTitles?: string[];
   refUrl?: string;
+  refId?: string;
   /** Fields that came from an online source (e.g. Taaghche) rather than the user. */
   online?: string[];
   /** Attach to an existing work instead of creating a new one. */
@@ -35,12 +44,16 @@ export async function createBook(input: NewBookInput): Promise<BookCopy> {
     let workId = input.workId;
     if (!workId) {
       const authors = input.authors ?? [];
+      const altTitles = input.altTitles ?? [];
+      const workTitle = input.workTitle?.trim() || undefined;
       const work: BookWork = {
         id: newId(),
+        title: workTitle,
         authors,
-        altTitles: [],
+        altTitles,
         refUrl: input.refUrl,
-        provenance: manualProv({ authors, refUrl: input.refUrl }, input.online),
+        refId: input.refId || undefined,
+        provenance: manualProv({ title: workTitle, authors, altTitles, refUrl: input.refUrl, refId: input.refId }, input.online),
         createdAt: t,
         updatedAt: t,
       };
@@ -55,19 +68,32 @@ export async function createBook(input: NewBookInput): Promise<BookCopy> {
       translators: input.translators ?? [],
       publisher: input.publisher || undefined,
       publication: input.publication || undefined,
+      language: input.language || undefined,
+      isbn: input.isbn || undefined,
       pageCount: input.pageCount,
+      startedAt: input.startedAt,
+      finishedAt: input.finishedAt,
+      rating: input.rating,
       photoIds: input.photoIds ?? [],
       owned: input.owned ?? true,
       status,
       matchStatus: 'unidentified',
       provenance: manualProv(
-        { title: input.title, translators: input.translators, publisher: input.publisher, publication: input.publication, pageCount: input.pageCount },
+        {
+          title: input.title,
+          translators: input.translators,
+          publisher: input.publisher,
+          publication: input.publication,
+          language: input.language,
+          isbn: input.isbn,
+          pageCount: input.pageCount,
+        },
         input.online,
       ),
       createdAt: t,
       updatedAt: t,
     };
-    if (status === 'reading') copy.startedAt = t;
+    if (status === 'reading' && !copy.startedAt) copy.startedAt = t;
     await db.bookCopies.add(copy);
     if (input.note?.trim()) {
       await db.notes.add({

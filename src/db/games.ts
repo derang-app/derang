@@ -8,9 +8,15 @@ export interface NewGameInput {
   owned?: boolean;
   photoIds?: string[];
   favoritePlayers?: number[];
+  rating?: number;
+  notes?: string;
+  /** Original game name and other names it's known by. */
+  workName?: string;
+  altNames?: string[];
   /** Specs of the original game (shared by all copies of it). */
   minPlayers?: number;
   maxPlayers?: number;
+  recommendedPlayers?: number[];
   playTimeMin?: number;
   playTimeMax?: number;
   complexity?: number;
@@ -39,6 +45,7 @@ export async function createGame(input: NewGameInput): Promise<GameCopy> {
       const specs = {
         minPlayers: input.minPlayers,
         maxPlayers: input.maxPlayers,
+        recommendedPlayers: input.recommendedPlayers ?? [],
         playTimeMin: input.playTimeMin,
         playTimeMax: input.playTimeMax,
         complexity: input.complexity,
@@ -46,15 +53,15 @@ export async function createGame(input: NewGameInput): Promise<GameCopy> {
         tags: input.tags ?? [],
       };
       const links = { bggId: input.bggId, refUrl: input.refUrl };
+      const names = { name: input.workName?.trim() || undefined, altNames: input.altNames ?? [] };
       const work: GameWork = {
         id: newId(),
-        altNames: [],
-        recommendedPlayers: [],
+        ...names,
         ...specs,
         ...links,
         provenance: {
           ...provFor(specs, input.specsSource ?? 'manual'),
-          ...provFor(links, 'manual'),
+          ...provFor({ ...links, ...names }, 'manual'),
         },
         createdAt: t,
         updatedAt: t,
@@ -70,6 +77,8 @@ export async function createGame(input: NewGameInput): Promise<GameCopy> {
       edition: input.edition,
       owned: input.owned ?? true,
       favoritePlayers: input.favoritePlayers ?? [],
+      rating: input.rating,
+      notes: input.notes?.trim() || undefined,
       matchStatus: 'unidentified',
       provenance: provFor(
         { name: input.name, edition: input.edition, favoritePlayers: input.favoritePlayers },

@@ -4,7 +4,7 @@ import { useApiKeyHint } from '../ai/secret';
 import { createBook } from '../db/books';
 import { saveErrorText, saveWithTimeout } from '../db/db';
 import { createGame } from '../db/games';
-import type { Edition, ReadStatus } from '../db/types';
+import type { Edition, Interaction, ReadStatus } from '../db/types';
 import { deletePhotos, importPhoto } from '../lib/images';
 import { useOnline } from '../lib/online';
 import { takeSharedImage } from '../lib/share';
@@ -12,15 +12,15 @@ import { fa, joinNames, parseList, parseNum, parseRange, safeUrl, splitNames, to
 import { COVER_ERROR_TEXT, CoverError, downloadImage, parseTaaghcheLink, taaghcheCoverUrl } from '../online/covers';
 import { fetchTaaghcheBook, taaghcheBookUrl, taaghchePublication } from '../online/taaghche';
 import { GAME_TAGS } from '../lib/vocab';
-import { AiHelperToggle, SelectField, TagEditor, TextField } from '../ui/fields';
-import { BackButton, BottomAction, cx, Icon, PrimaryButton, Spinner } from '../ui/kit';
+import { AiHelperToggle, JalaliField, SelectField, TagEditor, TextField } from '../ui/fields';
+import { BackButton, BottomAction, cx, Icon, PrimaryButton, Spinner, Stars } from '../ui/kit';
 import { useOverlay } from '../ui/overlay';
 import { PhotoField } from '../ui/PhotoPicker';
 
 type Kind = 'book' | 'game';
 type BookState = ReadStatus | 'wish';
 /** Book fields that can be filled from a Taaghche link. */
-type BookFields = { title: string; author: string; translator: string; publisher: string; publication: string; pages: string };
+type BookFields = { title: string; author: string; translator: string; publisher: string; publication: string; pages: string; refUrl: string };
 
 /** AddEntry + AddGame designs: one screen with the type switch at the top. */
 export default function AddEntry() {
@@ -61,6 +61,15 @@ export default function AddEntry() {
   const [translator, setTranslator] = useState('');
   const [publisher, setPublisher] = useState('');
   const [publication, setPublication] = useState('');
+  const [language, setLanguage] = useState('');
+  const [isbn, setIsbn] = useState('');
+  const [startedAt, setStartedAt] = useState<number>();
+  const [finishedAt, setFinishedAt] = useState<number>();
+  const [rating, setRating] = useState<number>();
+  const [workTitle, setWorkTitle] = useState('');
+  const [altTitles, setAltTitles] = useState('');
+  const [refUrl, setRefUrl] = useState('');
+  const [refId, setRefId] = useState('');
   /** What Taaghche filled in, to tell its values apart from the user's own at save time. */
   const [taaghche, setTaaghche] = useState<{ id: string; fields: Partial<BookFields> }>();
 
@@ -73,12 +82,23 @@ export default function AddEntry() {
   const [complexity, setComplexity] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [bgg, setBgg] = useState('');
+  const [workName, setWorkName] = useState('');
+  const [altNames, setAltNames] = useState('');
+  const [recommended, setRecommended] = useState('');
+  const [interaction, setInteraction] = useState<Interaction | ''>('');
+  const [gameRating, setGameRating] = useState<number>();
+  const [gameNotes, setGameNotes] = useState('');
   const [fromRulebook, setFromRulebook] = useState(false);
   const [gameWish, setGameWish] = useState(wish);
 
   const dirty =
     photoIds.length > 0 ||
-    [title, author, pages, note, translator, publisher, publication, name, allowed, favorite, time, complexity, bgg].some((v) => v.trim()) ||
+    [
+      title, author, pages, note, translator, publisher, publication, language, isbn, workTitle, altTitles, refUrl, refId,
+      name, allowed, favorite, time, complexity, bgg, workName, altNames, recommended, gameNotes,
+    ].some((v) => v.trim()) ||
+    [startedAt, finishedAt, rating, gameRating].some((v) => v !== undefined) ||
+    !!interaction ||
     tags.length > 0;
 
   const close = async () => {
@@ -107,7 +127,7 @@ export default function AddEntry() {
     try {
       let to: string;
       if (kind === 'book') {
-        const current: BookFields = { title, author, translator, publisher, publication, pages };
+        const current: BookFields = { title, author, translator, publisher, publication, pages, refUrl };
         const fromTaaghche = (k: keyof BookFields) => !!taaghche?.fields[k] && taaghche.fields[k] === current[k];
         const copy = await saveWithTimeout(() => createBook({
           title: label,
@@ -115,15 +135,22 @@ export default function AddEntry() {
           translators: splitNames(translator),
           publisher: publisher.trim(),
           publication: publication.trim(),
+          language: language.trim(),
+          isbn: isbn.trim(),
           pageCount: parseNum(pages),
+          startedAt,
+          finishedAt,
+          rating,
+          workTitle,
+          altTitles: splitNames(altTitles),
+          refUrl: safeUrl(refUrl),
+          refId: refId.trim(),
           status: status === 'wish' ? 'unread' : status,
           owned: status !== 'wish',
           photoIds,
           note,
-          refUrl: taaghche ? taaghcheBookUrl(taaghche.id) : undefined,
           online: [
-            ...(taaghche ? ['refUrl'] : []),
-            ...(['title', 'publisher', 'publication'] as const).filter(fromTaaghche),
+            ...(['title', 'publisher', 'publication', 'refUrl'] as const).filter(fromTaaghche),
             ...(fromTaaghche('author') ? ['authors'] : []),
             ...(fromTaaghche('translator') ? ['translators'] : []),
             ...(fromTaaghche('pages') ? ['pageCount'] : []),
@@ -140,11 +167,17 @@ export default function AddEntry() {
           owned: !gameWish,
           photoIds,
           favoritePlayers: parseList(favorite),
+          rating: gameRating,
+          notes: gameNotes,
+          workName,
+          altNames: splitNames(altNames),
+          recommendedPlayers: parseList(recommended),
           minPlayers: range.min,
           maxPlayers: range.max,
           playTimeMin: t.min,
           playTimeMax: t.max,
           complexity: clampComplexity(parseNum(complexity)),
+          interaction: interaction || undefined,
           tags,
           bggId,
           refUrl,
@@ -220,6 +253,7 @@ export default function AddEntry() {
                 publisher: b.publisher ?? '',
                 publication: taaghchePublication(b),
                 pages: b.pages ? fa(b.pages) : '',
+                refUrl: taaghcheBookUrl(id),
               };
               // Fill only what's still empty; anything the user already typed wins.
               const fill = (v: string, set: (s: string) => void, next?: string) => !v.trim() && next && set(next);
@@ -229,6 +263,7 @@ export default function AddEntry() {
               fill(publisher, setPublisher, fields.publisher);
               fill(publication, setPublication, fields.publication);
               fill(pages, setPages, fields.pages);
+              fill(refUrl, setRefUrl, fields.refUrl);
               setTaaghche({ id, fields });
               toast(cover.status === 'fulfilled' ? 'جلد و مشخصات از طاقچه آمد' : 'مشخصات آمد، ولی جلد دریافت نشد.', cover.status === 'fulfilled' ? undefined : 'error');
             }}
@@ -238,20 +273,20 @@ export default function AddEntry() {
         <PhotoField photoIds={photoIds} onChange={setPhotoIds} />
 
         {kind === 'book' ? (
-          <div className="space-y-6">
-            <TextField label="عنوان کتاب" value={title} onChange={setTitle} placeholder="نام کتاب را وارد کنید..." />
-            <TextField label="نویسنده / پدیدآور" value={author} onChange={setAuthor} placeholder="نام نویسنده... (اختیاری)" hint="چند نام را با «،» جدا کن." />
-            <TextField label="مترجم" value={translator} onChange={setTranslator} placeholder="(اختیاری)" hint="کتاب تألیفی فارسی است؟ خالی بگذار." />
-            {(taaghche || publisher || publication) && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <TextField label="ناشر" value={publisher} onChange={setPublisher} placeholder="(اختیاری)" />
-                  <TextField label="مشخصات انتشار" value={publication} onChange={setPublication} placeholder="(اختیاری)" />
-                </div>
-              </>
-            )}
-            <div className="grid grid-cols-2 gap-4">
-              <TextField label="تعداد صفحات" value={pages} onChange={setPages} placeholder="مثلاً ۲۰۰" numeric />
+          <div className="space-y-10">
+            <section className="space-y-6">
+              <h2 className="text-sm font-bold text-[#4F4839] border-r-4 border-[#8E3200] pr-3">اطلاعات نسخهٔ من</h2>
+              <TextField label="عنوان روی کتاب" value={title} onChange={setTitle} placeholder="نام کتاب را وارد کنید..." />
+              <TextField label="مترجم یا مترجمان" value={translator} onChange={setTranslator} placeholder="(اختیاری)" hint="چند نام را با «،» جدا کن. کتاب تألیفی فارسی است؟ خالی بگذار." />
+              <div className="grid grid-cols-2 gap-4">
+                <TextField label="ناشر" value={publisher} onChange={setPublisher} placeholder="(اختیاری)" />
+                <TextField label="زبان" value={language} onChange={setLanguage} placeholder="فارسی" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <TextField label="مشخصات انتشار" value={publication} onChange={setPublication} placeholder="چاپ سوم، ۱۴۰۱" />
+                <TextField label="تعداد صفحات" value={pages} onChange={setPages} placeholder="مثلاً ۲۰۰" numeric />
+              </div>
+              <TextField label="شابک (اختیاری)" value={isbn} onChange={setIsbn} ltr placeholder="978-..." />
               <SelectField<BookState>
                 label="وضعیت"
                 value={status}
@@ -263,12 +298,30 @@ export default function AddEntry() {
                   ['wish', 'هنوز ندارم (علاقه‌مندی)'],
                 ]}
               />
-            </div>
-            <TextField label="یادداشت کوتاه" value={note} onChange={setNote} placeholder="اولین برداشت خود را بنویسید... (اختیاری)" multiline />
+              <div className="grid grid-cols-2 gap-4">
+                <JalaliField label="تاریخ شروع" value={startedAt} onChange={setStartedAt} />
+                <JalaliField label="تاریخ پایان" value={finishedAt} onChange={setFinishedAt} />
+              </div>
+              <div className="space-y-2">
+                <p className="field-label">امتیاز شخصی</p>
+                <Stars value={rating} onChange={setRating} size="text-2xl" gap="gap-2" />
+              </div>
+              <TextField label="یادداشت کوتاه" value={note} onChange={setNote} placeholder="اولین برداشت خود را بنویسید... (اختیاری)" multiline />
+            </section>
+
+            <section className="space-y-6">
+              <h2 className="text-sm font-bold text-[#4F4839] border-r-4 border-[#D7A86E] pr-3">اطلاعات اثر اصلی</h2>
+              <TextField label="نویسنده یا نویسندگان" value={author} onChange={setAuthor} placeholder="(اختیاری)" hint="چند نام را با «،» جدا کن." />
+              <TextField label="عنوان اصلی" value={workTitle} onChange={setWorkTitle} placeholder="(اختیاری)" hint="برای ترجمه، عنوان به زبان اصلی؛ برای کتاب تألیفی، خالی بماند همان عنوان روی کتاب حساب می‌شود." />
+              <TextField label="نام‌های جایگزین" value={altTitles} onChange={setAltTitles} placeholder="(اختیاری)" />
+              <TextField label="لینک مرجع" value={refUrl} onChange={setRefUrl} ltr placeholder="https://..." />
+              <TextField label="شناسهٔ مرجع" value={refId} onChange={setRefId} ltr />
+            </section>
           </div>
         ) : (
-          <div className="space-y-6">
-            <div className="space-y-4">
+          <div className="space-y-10">
+            <section className="space-y-6">
+              <h2 className="text-sm font-bold text-[#4F4839] border-r-4 border-[#8E3200] pr-3">نسخهٔ من</h2>
               <TextField label="نام بازی (روی نسخهٔ من)" value={name} onChange={setName} placeholder="مثلاً تیکت تو راید..." />
               <SelectField<Edition | ''>
                 label="نوع نسخه (اختیاری)"
@@ -282,28 +335,48 @@ export default function AddEntry() {
                   ['unknown', 'نامشخص'],
                 ]}
               />
-            </div>
-            <div className="space-y-2">
-              <p className="field-label">تعداد بازیکنان</p>
-              <div className="grid grid-cols-2 gap-4">
-                <input aria-label="تعداد بازیکن مجاز" value={allowed} onChange={(e) => setAllowed(e.target.value)} placeholder="مجاز (مثلاً ۲-۵)" inputMode="numeric" className="input-field" />
-                <input aria-label="تعداد موردعلاقهٔ من" value={favorite} onChange={(e) => setFavorite(e.target.value)} placeholder="محبوب من (مثلاً ۴)" inputMode="numeric" className="input-field" />
+              <TextField label="تعداد موردعلاقهٔ من" value={favorite} onChange={setFavorite} placeholder="مثلاً ۳، ۴" numeric hint="بر اساس تجربهٔ خودت؛ جدا از تعداد مجاز." />
+              <div className="space-y-2">
+                <p className="field-label">امتیاز شخصی</p>
+                <Stars value={gameRating} onChange={setGameRating} size="text-2xl" gap="gap-2" />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <TextField label="زمان (دقیقه)" value={time} onChange={setTime} placeholder="مثلاً ۳۰-۶۰" numeric />
-              <TextField label="پیچیدگی (۱ تا ۵)" value={complexity} onChange={setComplexity} placeholder="مثلاً ۲.۵" numeric />
-            </div>
-            <TagEditor label="سبک و مکانیزم‌ها" tags={tags} onChange={setTags} suggestions={GAME_TAGS} />
-            <TextField label="لینک یا شناسه BGG (اختیاری)" value={bgg} onChange={setBgg} placeholder="https://boardgamegeek.com/..." ltr />
-            <label className="flex items-center gap-3 text-xs font-bold text-[#4F4839] px-2 min-h-11">
-              <input type="checkbox" checked={fromRulebook} onChange={(e) => setFromRulebook(e.target.checked)} className="w-5 h-5 accent-[#8E3200]" />
-              مشخصات را از روی دفترچهٔ بازی وارد کرده‌ام
-            </label>
-            <label className="flex items-center gap-3 text-xs font-bold text-[#4F4839] px-2 min-h-11">
-              <input type="checkbox" checked={gameWish} onChange={(e) => setGameWish(e.target.checked)} className="w-5 h-5 accent-[#8E3200]" />
-              هنوز ندارم (فهرست علاقه‌مندی)
-            </label>
+              <TextField label="یادداشت" value={gameNotes} onChange={setGameNotes} placeholder="(اختیاری)" multiline />
+              <label className="flex items-center gap-3 text-xs font-bold text-[#4F4839] px-2 min-h-11">
+                <input type="checkbox" checked={gameWish} onChange={(e) => setGameWish(e.target.checked)} className="w-5 h-5 accent-[#8E3200]" />
+                هنوز ندارم (فهرست علاقه‌مندی)
+              </label>
+            </section>
+
+            <section className="space-y-6">
+              <h2 className="text-sm font-bold text-[#4F4839] border-r-4 border-[#D7A86E] pr-3">بازی اصلی</h2>
+              <TextField label="نام اصلی بازی" value={workName} onChange={setWorkName} ltr placeholder="Ticket to Ride: Europe" />
+              <TextField label="نام‌های جایگزین" value={altNames} onChange={setAltNames} placeholder="(اختیاری)" />
+              <TextField label="لینک یا شناسه BGG (اختیاری)" value={bgg} onChange={setBgg} placeholder="https://boardgamegeek.com/..." ltr />
+              <div className="grid grid-cols-2 gap-4">
+                <TextField label="بازیکن مجاز" value={allowed} onChange={setAllowed} placeholder="مثلاً ۲-۵" numeric />
+                <TextField label="پیشنهادی منبع" value={recommended} onChange={setRecommended} placeholder="مثلاً ۴" numeric />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <TextField label="زمان (دقیقه)" value={time} onChange={setTime} placeholder="مثلاً ۳۰-۶۰" numeric />
+                <TextField label="پیچیدگی (۱ تا ۵)" value={complexity} onChange={setComplexity} placeholder="مثلاً ۲.۵" numeric hint="۱ بسیار ساده … ۵ خیلی پیچیده" />
+              </div>
+              <SelectField<Interaction | ''>
+                label="میزان تعامل بازیکنان"
+                value={interaction}
+                onChange={setInteraction}
+                options={[
+                  ['', 'ثبت نشده'],
+                  ['low', 'کم'],
+                  ['medium', 'متوسط'],
+                  ['high', 'زیاد'],
+                ]}
+              />
+              <TagEditor label="سبک و مکانیزم‌ها" tags={tags} onChange={setTags} suggestions={GAME_TAGS} />
+              <label className="flex items-center gap-3 text-xs font-bold text-[#4F4839] px-2 min-h-11">
+                <input type="checkbox" checked={fromRulebook} onChange={(e) => setFromRulebook(e.target.checked)} className="w-5 h-5 accent-[#8E3200]" />
+                مشخصات را از روی دفترچهٔ بازی وارد کرده‌ام
+              </label>
+            </section>
           </div>
         )}
 
