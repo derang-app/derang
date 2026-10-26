@@ -354,17 +354,11 @@ function StatusCard({
 function ProgressSheet({ open, onClose, copy, onFinished }: { open: boolean; onClose: () => void; copy: BookCopy; onFinished: () => void }) {
   const flight = useFlight();
   const [page, setPage] = useState('');
-  const [total, setTotal] = useState('');
   useEffect(() => {
-    if (open) {
-      setPage(copy.currentPage ? String(copy.currentPage) : '');
-      setTotal(copy.pageCount ? String(copy.pageCount) : '');
-    }
-  }, [open, copy.currentPage, copy.pageCount]);
+    if (open) setPage(copy.currentPage ? String(copy.currentPage) : '');
+  }, [open, copy.currentPage]);
   const save = flight.wrap(async () => {
     const n = parseNum(page);
-    const t = parseNum(total);
-    if (t && t !== copy.pageCount) await updateCopy(copy.id, { pageCount: Math.round(t) });
     onClose();
     if (n === undefined) return;
     const done = await setProgress(copy.id, Math.round(n));
@@ -374,16 +368,10 @@ function ProgressSheet({ open, onClose, copy, onFinished }: { open: boolean; onC
     <Sheet open={open} onClose={onClose} label="ثبت پیشرفت">
       <h2 className="text-xl font-bold text-center mb-2">ثبت پیشرفت</h2>
       <p className="text-xs text-center text-gray-500 mb-8">به کدام صفحه رسیدی؟</p>
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <label className="space-y-2 block">
-          <span className="field-label">صفحهٔ فعلی</span>
-          <input autoFocus value={page} onChange={(e) => setPage(e.target.value)} inputMode="numeric" className="input-field text-center text-lg font-bold" />
-        </label>
-        <label className="space-y-2 block">
-          <span className="field-label">کل صفحات (اختیاری)</span>
-          <input value={total} onChange={(e) => setTotal(e.target.value)} inputMode="numeric" className="input-field text-center text-lg" />
-        </label>
-      </div>
+      <label className="space-y-2 block mb-8">
+        <span className="field-label">صفحهٔ فعلی</span>
+        <input autoFocus value={page} onChange={(e) => setPage(e.target.value)} inputMode="numeric" className="input-field text-center text-lg font-bold" />
+      </label>
       <button type="button" onClick={save} className="w-full bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-[#8E3200]/20 min-h-11">
         ذخیره
       </button>
