@@ -92,7 +92,7 @@ export default function Players() {
                   ) : (
                     <p className="text-[11px] text-gray-500 font-medium italic">هنوز بازی ثبت نشده</p>
                   )}
-                  {p.likes.length > 0 && <p className="text-[10px] text-gray-500 truncate">دوست دارد: {p.likes.join('، ')}</p>}
+                  {p.likes.length > 0 && <p className="text-[10px] text-gray-500 truncate">سبک‌های محبوب: {p.likes.join('، ')}</p>}
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   {s && <span className="text-[10px] font-bold text-[#8E3200]">{fa(s.plays)} جلسه</span>}
