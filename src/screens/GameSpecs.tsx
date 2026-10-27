@@ -51,6 +51,7 @@ export default function GameSpecs() {
             {work?.name && <p className="text-[11px] text-gray-500 font-medium ltr text-right">{work.name}</p>}
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               {copy.edition && <span className="bg-[#8E3200] text-white text-[9px] px-2 py-0.5 rounded-full font-bold">نسخه {EDITION_LABEL[copy.edition]}</span>}
+              {copy.brand && <span className="bg-white border border-[#EEE2D3] text-[#4F4839] text-[9px] px-2 py-0.5 rounded-full font-bold">{copy.brand}</span>}
               <MatchBadge status={copy.matchStatus} />
             </div>
           </div>

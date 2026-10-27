@@ -5,6 +5,7 @@ import type { Edition, GameCopy, GameWork, Interaction, MyResult, Player, Sessio
 export interface NewGameInput {
   name: string;
   edition?: Edition;
+  brand?: string;
   owned?: boolean;
   photoIds?: string[];
   favoritePlayers?: number[];
@@ -75,13 +76,14 @@ export async function createGame(input: NewGameInput): Promise<GameCopy> {
       name: input.name.trim(),
       photoIds: input.photoIds ?? [],
       edition: input.edition,
+      brand: input.brand?.trim() || undefined,
       owned: input.owned ?? true,
       favoritePlayers: input.favoritePlayers ?? [],
       rating: input.rating,
       notes: input.notes?.trim() || undefined,
       matchStatus: 'unidentified',
       provenance: provFor(
-        { name: input.name, edition: input.edition, favoritePlayers: input.favoritePlayers },
+        { name: input.name, edition: input.edition, brand: input.brand?.trim() || undefined, favoritePlayers: input.favoritePlayers },
         'manual',
       ),
       createdAt: t,

@@ -118,6 +118,8 @@ export interface GameCopy {
   name: string;
   photoIds: string[];
   edition?: Edition;
+  /** Brand or publisher printed on my copy (a redesign's maker, a local publisher…). */
+  brand?: string;
   owned: boolean;
   /** Player counts I enjoy most, from my own experience. */
   favoritePlayers: number[];

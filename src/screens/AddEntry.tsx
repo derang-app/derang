@@ -12,7 +12,7 @@ import { fa, joinNames, parseList, parseNum, parseRange, safeUrl, splitNames, to
 import { COVER_ERROR_TEXT, CoverError, downloadImage, parseTaaghcheLink, taaghcheCoverUrl } from '../online/covers';
 import { fetchTaaghcheBook, taaghcheBookUrl, taaghchePublication } from '../online/taaghche';
 import { GAME_TAGS } from '../lib/vocab';
-import { AiHelperToggle, JalaliField, SelectField, TagEditor, TextField } from '../ui/fields';
+import { AiHelperToggle, JalaliField, PlayerCountPicker, SelectField, TagEditor, TextField } from '../ui/fields';
 import { BackButton, BottomAction, cx, Icon, PrimaryButton, Spinner, Stars } from '../ui/kit';
 import { useOverlay } from '../ui/overlay';
 import { PhotoField } from '../ui/PhotoPicker';
@@ -77,7 +77,8 @@ export default function AddEntry() {
   const [name, setName] = useState('');
   const [edition, setEdition] = useState<Edition | ''>('');
   const [allowed, setAllowed] = useState('');
-  const [favorite, setFavorite] = useState('');
+  const [brand, setBrand] = useState('');
+  const [favorite, setFavorite] = useState<number[]>([]);
   const [time, setTime] = useState('');
   const [complexity, setComplexity] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -95,9 +96,10 @@ export default function AddEntry() {
     photoIds.length > 0 ||
     [
       title, author, pages, note, translator, publisher, publication, language, isbn, workTitle, altTitles, refUrl, refId,
-      name, allowed, favorite, time, complexity, bgg, workName, altNames, recommended, gameNotes,
+      name, brand, allowed, time, complexity, bgg, workName, altNames, recommended, gameNotes,
     ].some((v) => v.trim()) ||
     [startedAt, finishedAt, rating, gameRating].some((v) => v !== undefined) ||
+    favorite.length > 0 ||
     !!interaction ||
     tags.length > 0;
 
@@ -164,9 +166,10 @@ export default function AddEntry() {
         const copy = await saveWithTimeout(() => createGame({
           name: label,
           edition: edition || undefined,
+          brand,
           owned: !gameWish,
           photoIds,
-          favoritePlayers: parseList(favorite),
+          favoritePlayers: favorite,
           rating: gameRating,
           notes: gameNotes,
           workName,
@@ -335,7 +338,8 @@ export default function AddEntry() {
                   ['unknown', 'نامشخص'],
                 ]}
               />
-              <TextField label="تعداد موردعلاقهٔ من" value={favorite} onChange={setFavorite} placeholder="مثلاً ۳، ۴" numeric hint="بر اساس تجربهٔ خودت؛ جدا از تعداد مجاز." />
+              <TextField label="برند / ناشر" value={brand} onChange={setBrand} placeholder="(اختیاری) نامی که روی جعبه آمده" />
+              <PlayerCountPicker value={favorite} onChange={setFavorite} range={parseRange(allowed)} />
               <div className="space-y-2">
                 <p className="field-label">امتیاز شخصی</p>
                 <Stars value={gameRating} onChange={setGameRating} size="text-2xl" gap="gap-2" />

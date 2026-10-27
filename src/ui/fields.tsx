@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from 'react';
 import { formatJalali, parseJalali } from '../lib/date';
+import { fa } from '../lib/text';
 import { cx, Icon } from './kit';
 import { Sheet } from './overlay';
 
@@ -206,6 +207,50 @@ export function JalaliField({
         </div>
       )}
     </Field>
+  );
+}
+
+/**
+ * "My favourite player counts": tappable counts bounded by the game's allowed range
+ * (1–8 until that is filled in). Any already-picked count outside it stays visible so it can be removed.
+ */
+export function PlayerCountPicker({
+  value,
+  onChange,
+  range,
+}: {
+  value: number[];
+  onChange: (v: number[]) => void;
+  range: { min?: number; max?: number };
+}) {
+  const lo = Math.max(1, Math.round(range.min ?? 1));
+  const hi = Math.min(lo + 11, Math.max(lo, Math.round(range.max ?? (range.min === undefined ? 8 : lo))));
+  const counts = [...new Set([...Array.from({ length: hi - lo + 1 }, (_, i) => lo + i), ...value])].sort((a, b) => a - b);
+  const toggle = (n: number) => onChange(value.includes(n) ? value.filter((x) => x !== n) : [...value, n].sort((a, b) => a - b));
+  const known = range.min !== undefined || range.max !== undefined;
+  return (
+    <div className="space-y-2">
+      <p className="field-label">تعداد موردعلاقهٔ من</p>
+      <div className="flex flex-wrap gap-2 pt-1" role="group" aria-label="تعداد موردعلاقهٔ من">
+        {counts.map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-pressed={value.includes(n)}
+            onClick={() => toggle(n)}
+            className={cx(
+              'w-11 h-11 rounded-2xl text-sm font-bold border',
+              value.includes(n) ? 'bg-[#8E3200] border-[#8E3200] text-white shadow-lg shadow-[#8E3200]/20' : 'bg-white border-[#EEE2D3] text-[#4F4839]',
+            )}
+          >
+            {fa(n)}
+          </button>
+        ))}
+      </div>
+      <p className="text-[10px] text-gray-500 pr-4 leading-relaxed">
+        {known ? `از ${fa(lo)} تا ${fa(hi)} نفر، یعنی همان تعداد مجاز بازی.` : 'تا تعداد مجاز بازی را ننوشته‌ای، از ۱ تا ۸ نفر.'} چند عدد را می‌شود با هم انتخاب کرد؛ بر اساس تجربهٔ خودت.
+      </p>
+    </div>
   );
 }
 

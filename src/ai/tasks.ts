@@ -137,13 +137,14 @@ const BookCandidate = z.object({
   language: z.string().nullable(),
   publication: z.string().nullable().describe('سال یا نوبت چاپ، فقط اگر در عکس دیده می‌شود'),
   isbn: z.string().nullable().describe('فقط اگر در عکس کاملاً خوانا است'),
-  pageCount: z.number().int().nullable(),
+  pageCount: z.number().int().nullable().describe('تعداد صفحات همین نسخه: از عکس (شناسنامه، پشت جلد) یا اگر این چاپ/ناشر را می‌شناسی از دانش عمومی؛ در basis بگو از کجاست'),
   basis: z.string().describe('این پیشنهاد بر چه اساسی است؛ چه چیزی در عکس یا نام دیده شد و چه چیزی دانش عمومی است'),
 });
 
 const GameCandidate = z.object({
   originalName: z.string().nullable().describe('نام بازی اصلی که این نسخه از آن است'),
   altNames: z.array(z.string()),
+  brand: z.string().nullable().describe('برند یا ناشری که روی جعبهٔ همین نسخه دیده می‌شود، فقط اگر در عکس خوانا است'),
   bggId: z.string().nullable().describe('شناسهٔ BoardGameGeek فقط اگر کاملاً مطمئنی؛ در غیر این صورت null'),
   minPlayers: z.number().int().nullable(),
   maxPlayers: z.number().int().nullable(),
@@ -180,7 +181,7 @@ export async function identifyBook(copyId: string, signal?: AbortSignal) {
   const images = await photoParts(copy.photoIds);
   const text = `این یک کتاب در مجموعهٔ کاربر است. عکس‌ها (اگر هست) جلد یا صفحهٔ شناسنامهٔ همین نسخه‌اند.
 اطلاعات فعلی:\n${describeBook(copy, work, false) || '(فقط عکس)'}
-نویسنده، مترجم، ناشر، شابک و اثر اصلی (عنوان به زبان اصلی) را پیشنهاد بده. کتاب ممکن است ترجمه باشد یا تألیف فارسی؛ اگر تألیفی است، مترجم خالی است و عنوان اصلی همان عنوان فارسی است.`;
+نویسنده، مترجم، ناشر، شابک، تعداد صفحات و اثر اصلی (عنوان به زبان اصلی) را پیشنهاد بده. کتاب ممکن است ترجمه باشد یا تألیف فارسی؛ اگر تألیفی است، مترجم خالی است و عنوان اصلی همان عنوان فارسی است.`;
   const data = await provider.json({ system: IDENTIFY_RULES, parts: [...images, { type: 'text', text }], maxTokens: 6000 }, IdentifyResult(BookCandidate), signal);
   await db.bookCopies.update(copyId, { matchStatus: copy.matchStatus === 'confirmed' ? 'confirmed' : 'suggested' });
   return save({ kind: 'identify_book', targetType: 'book', targetId: copyId, model: provider.model, prompt: 'شناسایی کتاب', text: data.message, data });
@@ -195,7 +196,7 @@ export async function identifyGame(copyId: string, signal?: AbortSignal) {
   const text = `این یک بردگیم در مجموعهٔ کاربر است. بیشتر بازی‌های این مجموعه کپی با نام و ظاهر اصلی‌اند، بعضی ریدیزاین (فقط نام یا ظاهر عوض شده و قوانین همان است) و تعداد کمی اورجینال.
 نام روی نسخهٔ کاربر: ${copy.name}
 ${line('نوع نسخه', copy.edition ? EDITION_LABEL[copy.edition] : undefined)}${line('نام اصلی ثبت‌شده', work?.name)}
-بازی اصلی را شناسایی کن و مشخصات آن را (بازیکن مجاز، زمان، پیچیدگی ۱ تا ۵، سبک) پیشنهاد بده.`;
+${line('برند', copy.brand)}بازی اصلی را شناسایی کن، برند روی جعبه را اگر خواناست بخوان، و مشخصات آن را (بازیکن مجاز، زمان، پیچیدگی ۱ تا ۵، سبک) پیشنهاد بده.`;
   const data = await provider.json({ system: IDENTIFY_RULES, parts: [...images, { type: 'text', text }], maxTokens: 6000 }, IdentifyResult(GameCandidate), signal);
   await db.gameCopies.update(copyId, { matchStatus: copy.matchStatus === 'confirmed' ? 'confirmed' : 'suggested' });
   return save({ kind: 'identify_game', targetType: 'game', targetId: copyId, model: provider.model, prompt: 'شناسایی بازی', text: data.message, data });
@@ -238,6 +239,7 @@ function describeGame(copy: GameCopy, work?: GameWork) {
   return (
     `«${copy.name}»` +
     (work?.name ? ` (اصل: ${work.name})` : '') +
+    (copy.brand ? `، برند: ${copy.brand}` : '') +
     `، بازیکن مجاز: ${work?.minPlayers ?? '?'}-${work?.maxPlayers ?? '?'}` +
     (work?.recommendedPlayers.length ? `، پیشنهادی منبع: ${work.recommendedPlayers.join('، ')}` : '') +
     (copy.favoritePlayers.length ? `، محبوب من: ${copy.favoritePlayers.join('، ')}` : '') +

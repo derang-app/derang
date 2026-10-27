@@ -74,6 +74,7 @@ export default function GameDetails() {
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-[#4F4839] leading-snug">{copy.name}</h1>
           {work?.name && work.name !== copy.name && <p className="text-lg text-[#8E3200] font-medium italic ltr">{work.name}</p>}
+          {copy.brand && <p className="text-xs text-gray-500 font-medium">برند: {copy.brand}</p>}
           {!copy.owned && (
             <span className="inline-flex items-center gap-1 bg-[#8E3200] text-white text-[10px] px-3 py-1 rounded-full font-bold">
               <Icon name="fa-heart" /> در فهرست علاقه‌مندی؛ هنوز ندارم

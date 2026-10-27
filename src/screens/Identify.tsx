@@ -114,6 +114,7 @@ export default function Identify() {
       const g = c as GameSuggestion;
       add('name', 'نام بازی اصلی', 'work', g.originalName);
       add('altNames', 'نام‌های دیگر', 'work', g.altNames);
+      add('brand', 'برند', 'copy', g.brand);
       add('bggId', 'شناسه BGG', 'work', g.bggId);
       add('minPlayers', 'حداقل بازیکن مجاز', 'work', g.minPlayers);
       add('maxPlayers', 'حداکثر بازیکن مجاز', 'work', g.maxPlayers);
@@ -154,7 +155,7 @@ export default function Identify() {
         await updateCopy(id, { ...copyPatch, matchStatus: source === 'ai_confirmed' ? 'confirmed' : 'suggested' }, source);
         if (Object.keys(workPatch).length) await updateWork(subject.copy.workId, workPatch, source);
       } else {
-        await updateGameCopy(id, { matchStatus: source === 'ai_confirmed' ? 'confirmed' : 'suggested' }, source);
+        await updateGameCopy(id, { ...copyPatch, matchStatus: source === 'ai_confirmed' ? 'confirmed' : 'suggested' }, source);
         if (workPatch.bggId) workPatch.refUrl = `https://boardgamegeek.com/boardgame/${workPatch.bggId}`;
         if (Object.keys(workPatch).length) await updateGameWork(subject.copy.workId, workPatch, source);
       }

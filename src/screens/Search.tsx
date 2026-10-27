@@ -20,7 +20,7 @@ export default function Search() {
       books: books.filter((b) =>
         matchesQuery(q, b.copy.title, b.work?.title, b.work?.authors, b.work?.altTitles, b.copy.translators, b.copy.publisher, b.copy.isbn),
       ),
-      games: games.filter((g) => matchesQuery(q, g.copy.name, g.work?.name, g.work?.altNames, g.work?.tags, g.copy.notes)),
+      games: games.filter((g) => matchesQuery(q, g.copy.name, g.copy.brand, g.work?.name, g.work?.altNames, g.work?.tags, g.copy.notes)),
       notes: notes.filter((n) => matchesQuery(q, n.text, n.tags, n.chapter)),
     };
   }, [q, books, games, notes]);

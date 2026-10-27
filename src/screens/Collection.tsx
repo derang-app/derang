@@ -63,7 +63,7 @@ export default function Collection({ kind }: { kind: 'books' | 'games' }) {
         if (gameFilter === 'unidentified') return g.copy.matchStatus !== 'confirmed';
         return true;
       })
-      .filter((g) => matchesQuery(query, g.copy.name, g.work?.name, g.work?.altNames, g.work?.tags))
+      .filter((g) => matchesQuery(query, g.copy.name, g.copy.brand, g.work?.name, g.work?.altNames, g.work?.tags))
       .sort((a, b) => (sort === 'title' ? a.copy.name.localeCompare(b.copy.name, 'fa') : b.copy.updatedAt - a.copy.updatedAt));
   }, [games, gameFilter, query, sort, played]);
 

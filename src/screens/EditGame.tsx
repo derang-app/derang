@@ -6,7 +6,7 @@ import type { Edition, Interaction, Source } from '../db/types';
 import { deletePhotos } from '../lib/images';
 import { fa, formatRange, joinNames, matchesQuery, parseList, parseNum, parseRange, splitNames } from '../lib/text';
 import { GAME_TAGS } from '../lib/vocab';
-import { SelectField, TagEditor, TextField } from '../ui/fields';
+import { PlayerCountPicker, SelectField, TagEditor, TextField } from '../ui/fields';
 import { BottomAction, Icon, Loading, PageHeader, PhotoImg, PrimaryButton, Stars, useFlight } from '../ui/kit';
 import { Sheet, useOverlay } from '../ui/overlay';
 import { PhotoField } from '../ui/PhotoPicker';
@@ -26,6 +26,7 @@ export default function EditGame() {
   const [interaction, setInteraction] = useState<Interaction | ''>('');
   const [tags, setTags] = useState<string[]>([]);
   const [rating, setRating] = useState<number>();
+  const [favorite, setFavorite] = useState<number[]>([]);
   const [owned, setOwned] = useState(true);
   const [specsSource, setSpecsSource] = useState<Source>('manual');
   const [linkOpen, setLinkOpen] = useState(false);
@@ -36,7 +37,7 @@ export default function EditGame() {
     const { copy, work } = data;
     setForm({
       name: copy.name,
-      favorite: copy.favoritePlayers.map(fa).join('، '),
+      brand: copy.brand ?? '',
       notes: copy.notes ?? '',
       workName: work?.name ?? '',
       altNames: joinNames(work?.altNames),
@@ -51,6 +52,7 @@ export default function EditGame() {
     setInteraction(work?.interaction ?? '');
     setTags(work?.tags ?? []);
     setRating(copy.rating);
+    setFavorite(copy.favoritePlayers);
     setOwned(copy.owned);
     setSpecsSource(work?.provenance.minPlayers === 'rulebook' ? 'rulebook' : 'manual');
   }, [data, form]);
@@ -71,7 +73,8 @@ export default function EditGame() {
       name: form.name.trim(),
       photoIds,
       edition: edition || undefined,
-      favoritePlayers: parseList(form.favorite),
+      brand: form.brand.trim() || undefined,
+      favoritePlayers: favorite,
       rating,
       notes: form.notes.trim() || undefined,
       owned,
@@ -121,7 +124,8 @@ export default function EditGame() {
               ['unknown', 'نامشخص'],
             ]}
           />
-          <TextField label="تعداد موردعلاقهٔ من" value={form.favorite} onChange={set('favorite')} placeholder="مثلاً ۳، ۴" numeric hint="بر اساس تجربهٔ خودت؛ جدا از تعداد مجاز." />
+          <TextField label="برند / ناشر" value={form.brand} onChange={set('brand')} placeholder="(اختیاری) نامی که روی جعبه آمده" />
+          <PlayerCountPicker value={favorite} onChange={setFavorite} range={parseRange(form.allowed)} />
           <div className="space-y-2">
             <p className="field-label">امتیاز شخصی</p>
             <Stars value={rating} onChange={setRating} size="text-2xl" gap="gap-2" />

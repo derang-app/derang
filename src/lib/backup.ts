@@ -292,7 +292,7 @@ function validateRows(data: Record<DataTable, unknown[]>) {
   check(
     'gameCopies',
     (r) => isStr(r.workId) && gameWorks.has(r.workId) && isStr(r.name) && isStrArr(r.photoIds) && typeof r.owned === 'boolean' &&
-      isNumArr(r.favoritePlayers) && oneOf(r.matchStatus, MATCH) && isProv(r.provenance),
+      isNumArr(r.favoritePlayers) && optStr(r.brand) && oneOf(r.matchStatus, MATCH) && isProv(r.provenance),
   );
   const gameCopies = ids('gameCopies');
   check('players', (r) => isStr(r.name) && isStrArr(r.likes) && isStrArr(r.dislikes) && optStr(r.photoId));
