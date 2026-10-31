@@ -27,6 +27,10 @@ export interface NewGameInput {
   refUrl?: string;
   /** Origin of the specs above: typed by me, or read from the rulebook. */
   specsSource?: Source;
+  /** Fields that came from an online source (e.g. BoardGameGeek) rather than the user. */
+  online?: string[];
+  /** The BGG link came from an import, so the match needs no identifying. */
+  confirmed?: boolean;
   workId?: string;
 }
 
@@ -36,6 +40,10 @@ function provFor(values: Record<string, unknown>, source: Source): Record<string
     if (v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0)) prov[k] = source;
   }
   return prov;
+}
+
+function pick(values: Record<string, unknown>, keys: string[] = []): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(values).filter(([k]) => keys.includes(k)));
 }
 
 export async function createGame(input: NewGameInput): Promise<GameCopy> {
@@ -63,6 +71,7 @@ export async function createGame(input: NewGameInput): Promise<GameCopy> {
         provenance: {
           ...provFor(specs, input.specsSource ?? 'manual'),
           ...provFor({ ...links, ...names }, 'manual'),
+          ...provFor(pick({ ...specs, ...names }, input.online), 'online'),
         },
         createdAt: t,
         updatedAt: t,
@@ -81,7 +90,7 @@ export async function createGame(input: NewGameInput): Promise<GameCopy> {
       favoritePlayers: input.favoritePlayers ?? [],
       rating: input.rating,
       notes: input.notes?.trim() || undefined,
-      matchStatus: 'unidentified',
+      matchStatus: input.confirmed ? 'confirmed' : 'unidentified',
       provenance: provFor(
         { name: input.name, edition: input.edition, brand: input.brand?.trim() || undefined, favoritePlayers: input.favoritePlayers },
         'manual',

@@ -8,9 +8,10 @@ import type { Edition, Interaction, ReadStatus } from '../db/types';
 import { deletePhotos, importPhoto } from '../lib/images';
 import { useOnline } from '../lib/online';
 import { takeSharedImage } from '../lib/share';
-import { fa, joinNames, parseList, parseNum, parseRange, safeUrl, splitNames, toLatinDigits } from '../lib/text';
+import { fa, formatRange, joinNames, parseList, parseNum, parseRange, safeUrl, splitNames, toLatinDigits } from '../lib/text';
 import { COVER_ERROR_TEXT, CoverError, downloadImage, parseTaaghcheLink, taaghcheCoverUrl } from '../online/covers';
 import { fetchTaaghcheBook, taaghcheBookUrl, taaghchePublication } from '../online/taaghche';
+import { BGG_ERROR_TEXT, BGG_SECRET, BggError, fetchBggGame } from '../online/bgg';
 import { GAME_TAGS } from '../lib/vocab';
 import { AiHelperToggle, JalaliField, PlayerCountPicker, SelectField, TagEditor, TextField } from '../ui/fields';
 import { BackButton, BottomAction, cx, Icon, PrimaryButton, Spinner, Stars } from '../ui/kit';
@@ -21,6 +22,8 @@ type Kind = 'book' | 'game';
 type BookState = ReadStatus | 'wish';
 /** Book fields that can be filled from a Taaghche link. */
 type BookFields = { title: string; author: string; translator: string; publisher: string; publication: string; pages: string; refUrl: string };
+/** Game fields that can be filled from a BoardGameGeek link. */
+type GameFields = { name: string; workName: string; allowed: string; recommended: string; time: string; complexity: string; bgg: string };
 
 /** AddEntry + AddGame designs: one screen with the type switch at the top. */
 export default function AddEntry() {
@@ -28,6 +31,7 @@ export default function AddEntry() {
   const [params] = useSearchParams();
   const { confirm, toast } = useOverlay();
   const keyHint = useApiKeyHint('anthropic');
+  const bggHint = useApiKeyHint(BGG_SECRET);
   const aiConfigured = !!keyHint;
   const [kind, setKind] = useState<Kind>(params.get('type') === 'game' ? 'game' : 'book');
   const wish = params.get('wish') === '1';
@@ -91,6 +95,8 @@ export default function AddEntry() {
   const [gameNotes, setGameNotes] = useState('');
   const [fromRulebook, setFromRulebook] = useState(false);
   const [gameWish, setGameWish] = useState(wish);
+  /** What BGG filled in, to tell its values apart from the user's own at save time. */
+  const [bggImport, setBggImport] = useState<{ fields: Partial<GameFields>; tags: string[] }>();
   // An original copy carries the original game's name, so it doubles as the work name
   // instead of asking for it twice. The field comes back if a different name was typed.
   const sameName = edition === 'original' && (!workName.trim() || workName.trim() === name.trim());
@@ -166,6 +172,8 @@ export default function AddEntry() {
         const range = parseRange(allowed);
         const t = parseRange(time);
         const { bggId, refUrl } = parseBgg(bgg);
+        const current: GameFields = { name, workName, allowed, recommended, time, complexity, bgg };
+        const fromBgg = (k: keyof GameFields) => !!bggImport?.fields[k] && bggImport.fields[k] === current[k];
         const copy = await saveWithTimeout(() => createGame({
           name: label,
           edition: edition || undefined,
@@ -188,6 +196,15 @@ export default function AddEntry() {
           bggId,
           refUrl,
           specsSource: fromRulebook ? 'rulebook' : 'manual',
+          online: [
+            ...(fromBgg('allowed') ? ['minPlayers', 'maxPlayers'] : []),
+            ...(fromBgg('recommended') ? ['recommendedPlayers'] : []),
+            ...(fromBgg('time') ? ['playTimeMin', 'playTimeMax'] : []),
+            ...(fromBgg('complexity') ? ['complexity'] : []),
+            ...(fromBgg('workName') && !sameName ? ['name'] : []),
+            ...(bggImport?.tags.length && bggImport.tags.every((t) => tags.includes(t)) ? ['tags'] : []),
+          ],
+          confirmed: fromBgg('bgg'),
         }));
         to = ai && aiConfigured ? `/identify/game/${copy.id}` : `/games/${copy.id}`;
       }
@@ -235,7 +252,8 @@ export default function AddEntry() {
         </div>
 
         {kind === 'book' && (
-          <TaaghcheImport
+          <LinkImport
+            source={TAAGHCHE_SOURCE}
             shared={params.get('share') ?? undefined}
             done={taaghche?.fields.title}
             onImport={async (id, signal) => {
@@ -275,6 +293,65 @@ export default function AddEntry() {
             }}
           />
         )}
+
+        {kind === 'game' &&
+          (bggHint ? (
+            <LinkImport
+              source={BGG_SOURCE}
+              done={bggImport?.fields.workName}
+              onImport={async (id, signal) => {
+                const g = await fetchBggGame(id, signal);
+                // The box art is a nice-to-have: the details are worth keeping without it.
+                let photo: string | undefined;
+                if (g.image) {
+                  try {
+                    photo = await importPhoto(await downloadImage(g.image, signal));
+                  } catch (e) {
+                    if ((e as Error).name === 'AbortError') throw e;
+                  }
+                }
+                if (signal.aborted) {
+                  if (photo) await deletePhotos([photo]);
+                  return;
+                }
+                if (photo) setPhotoIds((ids) => [photo, ...ids]);
+                const fields: Partial<GameFields> = {
+                  name: g.name,
+                  workName: g.name,
+                  allowed: formatRange(g.minPlayers, g.maxPlayers),
+                  recommended: g.bestPlayers.map((n) => fa(n)).join('، '),
+                  time: formatRange(g.playTimeMin, g.playTimeMax),
+                  complexity: g.weight !== undefined ? fa(g.weight) : '',
+                  bgg: g.url,
+                };
+                // Fill only what's still empty; anything the user already typed wins.
+                const fill = (v: string, set: (s: string) => void, next?: string) => !v.trim() && next && set(next);
+                fill(name, setName, fields.name);
+                fill(workName, setWorkName, fields.workName);
+                fill(allowed, setAllowed, fields.allowed);
+                fill(recommended, setRecommended, fields.recommended);
+                fill(time, setTime, fields.time);
+                fill(complexity, setComplexity, fields.complexity);
+                fill(bgg, setBgg, fields.bgg);
+                setTags((t) => [...new Set([...t, ...g.tags])]);
+                setBggImport({ fields, tags: g.tags });
+                toast(photo || !g.image ? 'مشخصات از BGG آمد' : 'مشخصات آمد، ولی عکس جعبه دریافت نشد.', photo || !g.image ? undefined : 'error');
+              }}
+            />
+          ) : (
+            bggHint === null && (
+              <button type="button" onClick={() => navigate('/settings/bgg')} className="backup-card shadow-sm w-full flex items-center gap-3 text-right">
+                <div className="w-10 h-10 rounded-full bg-[#FFF9F0] text-[#D7A86E] flex items-center justify-center flex-shrink-0">
+                  <Icon name="fa-link" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-[#4F4839]">از لینک BoardGameGeek</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5 leading-relaxed">برای پر شدن خودکار مشخصات و عکس جعبه، اول توکن BGG را در تنظیمات وارد کن.</p>
+                </div>
+                <Icon name="fa-chevron-left" className="text-[#D7A86E] mr-auto" />
+              </button>
+            )
+          ))}
 
         <PhotoField photoIds={photoIds} onChange={setPhotoIds} />
 
@@ -405,12 +482,52 @@ export default function AddEntry() {
   );
 }
 
-/** Same card as «جلد از طاقچه» in the cover studio, but it also fills in the book's details. */
-function TaaghcheImport({
+/** What a link card imports from: Taaghche for books, BoardGameGeek for games. */
+interface LinkSource {
+  /** Card title, e.g. «از لینک طاقچه». */
+  title: string;
+  /** What the card fills in, shown until something is imported. */
+  blurb: string;
+  button: string;
+  placeholder: string;
+  /** What the link points at, for «… پیدا نشد». */
+  noun: string;
+  /** Shown when the typed text isn't a link this source understands. */
+  invalid: string;
+  parse: (text: string) => string | undefined;
+  errorText: (e: unknown) => string;
+}
+
+const TAAGHCHE_SOURCE: LinkSource = {
+  title: 'از لینک طاقچه',
+  blurb: 'جلد، نویسنده، مترجم، ناشر و تعداد صفحه خودکار پر می‌شود.',
+  button: 'دریافت از طاقچه',
+  placeholder: 'https://taaghche.com/book/…',
+  noun: 'کتاب طاقچه',
+  invalid: 'این لینک کتاب طاقچه نیست؛ باید شبیه taaghche.com/book/… باشد.',
+  parse: parseTaaghcheLink,
+  errorText: (e) => (e instanceof CoverError ? COVER_ERROR_TEXT[e.code] : 'دریافت از طاقچه ممکن نشد.'),
+};
+
+const BGG_SOURCE: LinkSource = {
+  title: 'از لینک BoardGameGeek',
+  blurb: 'عکس جعبه، نام اصلی، تعداد بازیکن، زمان، پیچیدگی و سبک خودکار پر می‌شود.',
+  button: 'دریافت از BGG',
+  placeholder: 'https://boardgamegeek.com/boardgame/…',
+  noun: 'بازی BGG',
+  invalid: 'این لینک بازی BGG نیست؛ باید شبیه boardgamegeek.com/boardgame/… یا فقط شناسهٔ عددی باشد.',
+  parse: (text) => parseBgg(text).bggId,
+  errorText: (e) => (e instanceof BggError ? BGG_ERROR_TEXT[e.code] : e instanceof CoverError ? COVER_ERROR_TEXT[e.code] : BGG_ERROR_TEXT.bad_response),
+};
+
+/** Paste a link at the top of the form to fill in the details and the cover/box art. */
+function LinkImport({
+  source,
   shared,
   done,
   onImport,
 }: {
+  source: LinkSource;
   /** Text shared to Derang from another app (see lib/share). */
   shared?: string;
   done?: string;
@@ -422,27 +539,28 @@ function TaaghcheImport({
   const [busy, setBusy] = useState(false);
   const abort = useRef<AbortController>(undefined);
   useEffect(() => () => abort.current?.abort(), []);
-  const id = parseTaaghcheLink(link);
+  const id = source.parse(link);
+  const notFound = `در متن کپی‌شده لینک ${source.noun} پیدا نشد`;
 
-  const run = async (bookId: string) => {
+  const run = async (refId: string) => {
     if (busy) return;
     setBusy(true);
     abort.current = new AbortController();
     try {
-      await onImport(bookId, abort.current.signal);
+      await onImport(refId, abort.current.signal);
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
-      toast(e instanceof CoverError ? COVER_ERROR_TEXT[e.code] : 'دریافت از طاقچه ممکن نشد.', 'error');
+      toast(source.errorText(e), 'error');
     } finally {
       setBusy(false);
     }
   };
 
-  // Shared from Taaghche: fetch right away. A timer, so StrictMode's double mount only runs it once.
+  // Shared from another app: fetch right away. A timer, so StrictMode's double mount only runs it once.
   useEffect(() => {
     if (!shared) return;
-    const found = parseTaaghcheLink(shared);
-    const t = setTimeout(() => (found ? run(found) : toast('در متن به‌اشتراک‌گذاشته لینک کتاب طاقچه پیدا نشد', 'error')), 0);
+    const found = source.parse(shared);
+    const t = setTimeout(() => (found ? run(found) : toast(notFound.replace('کپی‌شده', 'به‌اشتراک‌گذاشته'), 'error')), 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -451,9 +569,9 @@ function TaaghcheImport({
     try {
       const text = await navigator.clipboard.readText();
       setLink(text);
-      const found = parseTaaghcheLink(text);
+      const found = source.parse(text);
       if (found) run(found);
-      else toast('در متن کپی‌شده لینک کتاب طاقچه پیدا نشد', 'error');
+      else toast(notFound, 'error');
     } catch {
       toast('دسترسی به متن کپی‌شده داده نشد؛ لینک را در کادر بچسبان', 'error');
     }
@@ -461,7 +579,7 @@ function TaaghcheImport({
 
   return (
     <form
-      // The Taaghche app shares a sentence around the link, which a type="url" check would reject.
+      // Apps share a sentence around the link, which a type="url" check would reject.
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
@@ -474,27 +592,27 @@ function TaaghcheImport({
           <Icon name={done ? 'fa-circle-check' : 'fa-link'} />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-bold text-[#4F4839]">از لینک طاقچه</p>
+          <p className="text-sm font-bold text-[#4F4839]">{source.title}</p>
           <p className="text-[10px] text-gray-400 mt-0.5 leading-relaxed truncate">
-            {done ? `«${done}» دریافت شد؛ هر چیزی را می‌توانی پایین‌تر عوض کنی.` : 'جلد، نویسنده، مترجم، ناشر و تعداد صفحه خودکار پر می‌شود.'}
+            {done ? `«${done}» دریافت شد؛ هر چیزی را می‌توانی پایین‌تر عوض کنی.` : source.blurb}
           </p>
         </div>
       </div>
       <div className="space-y-2">
-        <label htmlFor="taaghche-link" className="sr-only">
-          لینک کتاب در طاقچه
+        <label htmlFor="import-link" className="sr-only">
+          {source.title}
         </label>
         <input
-          id="taaghche-link"
+          id="import-link"
           type="url"
           inputMode="url"
           value={link}
           onChange={(e) => setLink(e.target.value)}
-          placeholder="https://taaghche.com/book/…"
+          placeholder={source.placeholder}
           dir="ltr"
           className="input-field text-left"
         />
-        {link.trim() && !id && <p className="text-[10px] text-[#8E3200] pr-4 leading-relaxed">این لینک کتاب طاقچه نیست؛ باید شبیه taaghche.com/book/… باشد.</p>}
+        {link.trim() && !id && <p className="text-[10px] text-[#8E3200] pr-4 leading-relaxed">{source.invalid}</p>}
       </div>
       <div className="flex gap-3">
         <button
@@ -511,7 +629,7 @@ function TaaghcheImport({
           className="flex-[2] bg-[#8E3200] text-white py-3 rounded-2xl font-bold text-xs shadow-lg shadow-[#8E3200]/20 flex items-center justify-center gap-2 min-h-11 disabled:opacity-60"
         >
           {busy ? <Spinner /> : <Icon name="fa-cloud-arrow-down" />}
-          <span>دریافت از طاقچه</span>
+          <span>{source.button}</span>
         </button>
       </div>
       {!online && <p className="text-[11px] text-[#8E3200] text-center">{COVER_ERROR_TEXT.offline}</p>}
