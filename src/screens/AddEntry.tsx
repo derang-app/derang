@@ -91,6 +91,9 @@ export default function AddEntry() {
   const [gameNotes, setGameNotes] = useState('');
   const [fromRulebook, setFromRulebook] = useState(false);
   const [gameWish, setGameWish] = useState(wish);
+  // An original copy carries the original game's name, so it doubles as the work name
+  // instead of asking for it twice. The field comes back if a different name was typed.
+  const sameName = edition === 'original' && (!workName.trim() || workName.trim() === name.trim());
 
   const dirty =
     photoIds.length > 0 ||
@@ -172,7 +175,7 @@ export default function AddEntry() {
           favoritePlayers: favorite,
           rating: gameRating,
           notes: gameNotes,
-          workName,
+          workName: sameName ? label : workName,
           altNames: splitNames(altNames),
           recommendedPlayers: parseList(recommended),
           minPlayers: range.min,
@@ -325,7 +328,13 @@ export default function AddEntry() {
           <div className="space-y-10">
             <section className="space-y-6">
               <h2 className="text-sm font-bold text-[#4F4839] border-r-4 border-[#8E3200] pr-3">نسخهٔ من</h2>
-              <TextField label="نام بازی (روی نسخهٔ من)" value={name} onChange={setName} placeholder="مثلاً تیکت تو راید..." />
+              <TextField
+                label="نام بازی (روی نسخهٔ من)"
+                value={name}
+                onChange={setName}
+                placeholder="مثلاً تیکت تو راید..."
+                hint={sameName ? 'نسخهٔ اورجینال است؛ همین نام، نام اصلی بازی هم ثبت می‌شود.' : undefined}
+              />
               <SelectField<Edition | ''>
                 label="نوع نسخه (اختیاری)"
                 value={edition}
@@ -353,7 +362,7 @@ export default function AddEntry() {
 
             <section className="space-y-6">
               <h2 className="text-sm font-bold text-[#4F4839] border-r-4 border-[#D7A86E] pr-3">بازی اصلی</h2>
-              <TextField label="نام اصلی بازی" value={workName} onChange={setWorkName} ltr placeholder="Ticket to Ride: Europe" />
+              {!sameName && <TextField label="نام اصلی بازی" value={workName} onChange={setWorkName} ltr placeholder="Ticket to Ride: Europe" />}
               <TextField label="نام‌های جایگزین" value={altNames} onChange={setAltNames} placeholder="(اختیاری)" />
               <TextField label="لینک یا شناسه BGG (اختیاری)" value={bgg} onChange={setBgg} placeholder="https://boardgamegeek.com/..." ltr />
               <div className="grid grid-cols-2 gap-4">

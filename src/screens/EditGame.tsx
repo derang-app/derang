@@ -63,6 +63,9 @@ export default function EditGame() {
   const set = (k: string) => (v: string) => setForm({ ...form, [k]: v });
   const others = games.filter((g) => g.copy.workId !== copy.workId && matchesQuery(query, g.copy.name, g.work?.name, g.work?.altNames));
 
+  // Same rule as adding a game: an original copy's name is the original game's name.
+  const sameName = edition === 'original' && (!form.workName.trim() || form.workName.trim() === form.name.trim());
+
   const save = flight.wrap(async () => {
     if (!form.name.trim()) {
       toast('نام بازی خالی است.', 'error');
@@ -97,7 +100,7 @@ export default function EditGame() {
       },
       specsSource,
     );
-    await updateGameWork(copy.workId, { name: form.workName.trim() || undefined, altNames: splitNames(form.altNames), bggId, refUrl });
+    await updateGameWork(copy.workId, { name: (sameName ? form.name : form.workName).trim() || undefined, altNames: splitNames(form.altNames), bggId, refUrl });
     await deletePhotos(removed);
     toast('تغییرات ذخیره شد');
     navigate(-1);
@@ -111,7 +114,12 @@ export default function EditGame() {
 
         <section className="space-y-6">
           <h2 className="text-sm font-bold text-[#4F4839] border-r-4 border-[#8E3200] pr-3">نسخهٔ من</h2>
-          <TextField label="نام روی نسخهٔ من" value={form.name} onChange={set('name')} />
+          <TextField
+            label="نام روی نسخهٔ من"
+            value={form.name}
+            onChange={set('name')}
+            hint={sameName ? 'نسخهٔ اورجینال است؛ همین نام، نام اصلی بازی هم ثبت می‌شود.' : undefined}
+          />
           <SelectField<Edition | ''>
             label="نوع نسخه"
             value={edition}
@@ -140,7 +148,7 @@ export default function EditGame() {
         <section className="space-y-6">
           <h2 className="text-sm font-bold text-[#4F4839] border-r-4 border-[#D7A86E] pr-3">بازی اصلی</h2>
           <p className="text-[11px] text-gray-500 -mt-3 leading-relaxed">مشترک بین همهٔ نسخه‌های این بازی. ریدیزاین‌ها همان قوانین بازی اصلی را دارند.</p>
-          <TextField label="نام اصلی بازی" value={form.workName} onChange={set('workName')} ltr placeholder="Ticket to Ride: Europe" />
+          {!sameName && <TextField label="نام اصلی بازی" value={form.workName} onChange={set('workName')} ltr placeholder="Ticket to Ride: Europe" />}
           <TextField label="نام‌های جایگزین" value={form.altNames} onChange={set('altNames')} />
           <TextField label="لینک یا شناسه BGG" value={form.bgg} onChange={set('bgg')} ltr placeholder="https://boardgamegeek.com/boardgame/..." />
           <div className="grid grid-cols-2 gap-4">
