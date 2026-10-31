@@ -9,7 +9,10 @@ import { linkGameCopyToWork, updateGameCopy, updateGameWork } from '../db/games'
 import { isManual } from '../db/provenance';
 import type { AiResponse, Provenance, Source } from '../db/types';
 import { fa, formatRange, normalizeForSearch } from '../lib/text';
+import { CATEGORY_TAGS, MECHANIC_TAGS } from '../lib/bggVocab';
 import { GAME_TAGS } from '../lib/vocab';
+
+const KNOWN_TAGS = new Set<string>([...GAME_TAGS, ...CATEGORY_TAGS, ...MECHANIC_TAGS]);
 import { BackButton, BottomAction, cx, Icon, Loading, PhotoImg, Spinner } from '../ui/kit';
 import { useOverlay } from '../ui/overlay';
 import { NotFound } from './BookDetails';
@@ -121,7 +124,7 @@ export default function Identify() {
       add('playTimeMin', 'حداقل زمان (دقیقه)', 'work', g.playTimeMin);
       add('playTimeMax', 'حداکثر زمان (دقیقه)', 'work', g.playTimeMax);
       add('complexity', 'پیچیدگی (۱ تا ۵)', 'work', g.complexity === null ? null : Math.min(5, Math.max(1, g.complexity)));
-      add('tags', 'سبک', 'work', g.tags.filter((t) => (GAME_TAGS as readonly string[]).includes(t)));
+      add('tags', 'سبک', 'work', g.tags.filter((t) => KNOWN_TAGS.has(t)));
     }
     return list;
   }, [data, chosen, subject, kind]);

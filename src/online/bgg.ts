@@ -1,4 +1,5 @@
 import { loadApiKey } from '../ai/secret';
+import { bggTags } from '../lib/bggVocab';
 
 // BoardGameGeek XML API2. Since 2025 every request needs a registered application's
 // Bearer token. Each user registers their own (free, non-commercial) and it stays
@@ -121,34 +122,10 @@ export interface BggGame {
   mechanics: string[];
   /** Publishers, the original one first; placeholders like "(Unknown)" left out. */
   publishers: string[];
-  /** Persian style tags derived from BGG categories/mechanics/rank families. */
+  /** BGG's categories, mechanics and rank families as the app's Persian tags (see lib/bggVocab). */
   tags: string[];
   url: string;
 }
-
-// BGG vocabulary → the app's style tags (see GAME_TAGS).
-const TAG_MAP: Record<string, string> = {
-  'Cooperative Game': 'همکاری',
-  'Team-Based Game': 'تیمی',
-  Bluffing: 'بلوف',
-  'Hidden Roles': 'بلوف',
-  'Party Game': 'مهمانی',
-  'Card Game': 'کارتی',
-  Dice: 'تاس',
-  'Dice Rolling': 'تاس',
-  'Word Game': 'کلمات',
-  'Real-time': 'سرعتی',
-  'Abstract Strategy': 'فکری',
-  Deduction: 'فکری',
-  Puzzle: 'فکری',
-  'Children\'s Game': 'خانوادگی',
-};
-const FAMILY_MAP: Record<string, string> = {
-  familygames: 'خانوادگی',
-  strategygames: 'استراتژی',
-  partygames: 'مهمانی',
-  abstracts: 'فکری',
-};
 
 function bestCounts(item: Element): number[] {
   const poll = item.querySelector('poll[name="suggested_numplayers"]');
@@ -178,7 +155,7 @@ export function parseThing(doc: Document): BggGame | undefined {
   const categories = links('boardgamecategory');
   const mechanics = links('boardgamemechanic');
   const families = Array.from(item.querySelectorAll('ranks > rank[type="family"]')).map((r) => r.getAttribute('name') ?? '');
-  const tags = [...new Set([...categories, ...mechanics].map((t) => TAG_MAP[t]).concat(families.map((f) => FAMILY_MAP[f])).filter(Boolean))];
+  const tags = bggTags(categories, mechanics, families);
   const weight = num(item.querySelector('statistics ratings averageweight'));
   const weightVotes = Number(attr(item.querySelector('statistics ratings numweights')) ?? 0);
   const thumb = item.querySelector('thumbnail')?.textContent?.trim();

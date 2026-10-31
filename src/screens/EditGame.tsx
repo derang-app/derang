@@ -6,7 +6,7 @@ import type { Edition, Interaction, Source } from '../db/types';
 import { deletePhotos } from '../lib/images';
 import { fa, formatRange, joinNames, matchesQuery, parseList, parseNum, parseRange, splitNames } from '../lib/text';
 import { GAME_TAGS } from '../lib/vocab';
-import { PlayerCountPicker, SelectField, TagEditor, TextField } from '../ui/fields';
+import { BGG_TAG_CATALOG, PlayerCountPicker, SelectField, TagEditor, TextField } from '../ui/fields';
 import { BottomAction, Icon, Loading, PageHeader, PhotoImg, PrimaryButton, Stars, useFlight } from '../ui/kit';
 import { Sheet, useOverlay } from '../ui/overlay';
 import { PhotoField } from '../ui/PhotoPicker';
@@ -170,7 +170,7 @@ export default function EditGame() {
               ['high', 'زیاد'],
             ]}
           />
-          <TagEditor label="سبک و ویژگی‌ها" tags={tags} onChange={setTags} suggestions={GAME_TAGS} />
+          <TagEditor label="سبک و ویژگی‌ها" tags={tags} onChange={setTags} suggestions={GAME_TAGS} catalog={BGG_TAG_CATALOG} />
           <SelectField<Source>
             label="منشأ مشخصات بالا"
             value={specsSource}

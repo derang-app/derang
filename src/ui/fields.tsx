@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { formatJalali, parseJalali } from '../lib/date';
-import { fa } from '../lib/text';
+import { CATEGORY_TAGS, MECHANIC_TAGS } from '../lib/bggVocab';
+import { fa, normalizeForSearch } from '../lib/text';
 import { cx, Icon } from './kit';
 import { Sheet } from './overlay';
 
@@ -260,14 +261,18 @@ export function TagEditor({
   tags,
   onChange,
   suggestions = [],
+  catalog,
 }: {
   label: string;
   tags: string[];
   onChange: (tags: string[]) => void;
   suggestions?: readonly string[];
+  /** Larger vocabulary in titled groups (e.g. BGG categories and mechanics), picked from a sheet. */
+  catalog?: { title: string; tags: readonly string[] }[];
 }) {
   const [draft, setDraft] = useState('');
   const [adding, setAdding] = useState(false);
+  const [browsing, setBrowsing] = useState(false);
   const add = (t: string) => {
     const v = t.trim().replace(/^#/, '');
     if (v && !tags.includes(v)) onChange([...tags, v]);
@@ -316,6 +321,15 @@ export function TagEditor({
             + افزودن
           </button>
         )}
+        {catalog && (
+          <button
+            type="button"
+            onClick={() => setBrowsing(true)}
+            className="px-3 py-1.5 bg-[#8E3200]/5 border border-[#D7A86E]/40 text-[#8E3200] text-[11px] rounded-full font-bold min-h-8 flex items-center gap-1.5"
+          >
+            <Icon name="fa-list-check" className="text-[10px]" /> فهرست BGG
+          </button>
+        )}
       </div>
       {rest.length > 0 && (
         <div className="flex flex-wrap gap-1.5 pt-1">
@@ -331,9 +345,80 @@ export function TagEditor({
           ))}
         </div>
       )}
+      {catalog && <TagCatalogSheet open={browsing} onClose={() => setBrowsing(false)} label={label} groups={catalog} tags={tags} onChange={onChange} />}
     </div>
   );
 }
+
+/** Searchable sheet of a large tag vocabulary; tapping a chip toggles it. */
+function TagCatalogSheet({
+  open,
+  onClose,
+  label,
+  groups,
+  tags,
+  onChange,
+}: {
+  open: boolean;
+  onClose: () => void;
+  label: string;
+  groups: { title: string; tags: readonly string[] }[];
+  tags: string[];
+  onChange: (tags: string[]) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const q = normalizeForSearch(query);
+  const toggle = (t: string) => onChange(tags.includes(t) ? tags.filter((x) => x !== t) : [...tags, t]);
+  return (
+    <Sheet open={open} onClose={onClose} label={label}>
+      <h2 className="text-lg font-bold text-center mb-4">{label}</h2>
+      <div className="relative mb-6">
+        <Icon name="fa-magnifying-glass" className="absolute right-4 top-1/2 -translate-y-1/2 text-[#D7A86E] text-sm" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="جستجو در دسته‌بندی‌ها و مکانیزم‌ها..." className="input-field pr-11" />
+      </div>
+      <div className="space-y-6">
+        {groups.map((g) => {
+          const shown = q ? g.tags.filter((t) => normalizeForSearch(t).includes(q)) : g.tags;
+          if (!shown.length) return null;
+          return (
+            <section key={g.title} className="space-y-3">
+              <p className="field-label">{g.title}</p>
+              <div className="flex flex-wrap gap-2">
+                {shown.map((t) => {
+                  const on = tags.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggle(t)}
+                      className={cx(
+                        'px-3 py-1.5 rounded-full text-[11px] font-bold border min-h-8',
+                        on ? 'bg-[#8E3200] border-[#8E3200] text-white' : 'bg-white border-[#EEE2D3] text-[#4F4839]',
+                      )}
+                    >
+                      {on && <Icon name="fa-check" className="ml-1 text-[9px]" />}
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+      <button type="button" onClick={onClose} className="mt-8 w-full bg-[#8E3200] text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-[#8E3200]/20 min-h-11">
+        تأیید
+      </button>
+    </Sheet>
+  );
+}
+
+/** BGG's categories and mechanics, for TagEditor's catalog. */
+export const BGG_TAG_CATALOG = [
+  { title: 'دسته‌بندی (BGG)', tags: CATEGORY_TAGS },
+  { title: 'مکانیزم (BGG)', tags: MECHANIC_TAGS },
+];
 
 /** «تکمیل هوشمند» toggle card from AddEntry. */
 export function AiHelperToggle({

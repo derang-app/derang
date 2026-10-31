@@ -13,7 +13,7 @@ import { COVER_ERROR_TEXT, CoverError, downloadImage, parseTaaghcheLink, taaghch
 import { fetchTaaghcheBook, taaghcheBookUrl, taaghchePublication } from '../online/taaghche';
 import { BGG_ERROR_TEXT, BGG_SECRET, BggError, fetchBggGame } from '../online/bgg';
 import { GAME_TAGS } from '../lib/vocab';
-import { AiHelperToggle, JalaliField, PlayerCountPicker, SelectField, TagEditor, TextField } from '../ui/fields';
+import { BGG_TAG_CATALOG, AiHelperToggle, JalaliField, PlayerCountPicker, SelectField, TagEditor, TextField } from '../ui/fields';
 import { BackButton, BottomAction, cx, Icon, PrimaryButton, Spinner, Stars } from '../ui/kit';
 import { useOverlay } from '../ui/overlay';
 import { PhotoField } from '../ui/PhotoPicker';
@@ -465,7 +465,7 @@ export default function AddEntry() {
                   ['high', 'زیاد'],
                 ]}
               />
-              <TagEditor label="سبک و مکانیزم‌ها" tags={tags} onChange={setTags} suggestions={GAME_TAGS} />
+              <TagEditor label="سبک و مکانیزم‌ها" tags={tags} onChange={setTags} suggestions={GAME_TAGS} catalog={BGG_TAG_CATALOG} />
               <label className="flex items-center gap-3 text-xs font-bold text-[#4F4839] px-2 min-h-11">
                 <input type="checkbox" checked={fromRulebook} onChange={(e) => setFromRulebook(e.target.checked)} className="w-5 h-5 accent-[#8E3200]" />
                 مشخصات را از روی دفترچهٔ بازی وارد کرده‌ام

@@ -1,6 +1,9 @@
 import type { Edition, Familiarity, Interaction, ReadStatus } from '../db/types';
 
-/** Standard game style tags. Users may add their own free-form tags too. */
+/**
+ * Broad game style tags, offered first. The full BGG categories and mechanics (lib/bggVocab)
+ * are a tap away, and users may add their own free-form tags too.
+ */
 export const GAME_TAGS = [
   'همکاری',
   'رقابتی',
@@ -8,6 +11,7 @@ export const GAME_TAGS = [
   'استراتژی',
   'مهمانی',
   'فکری',
+  'انتزاعی',
   'خانوادگی',
   'تیمی',
   'کارتی',
@@ -25,12 +29,12 @@ export interface Mood {
 }
 
 export const MOODS: Mood[] = [
-  { key: 'coop', label: 'همکاری', icon: 'fa-handshake', tags: ['همکاری', 'تیمی'] },
+  { key: 'coop', label: 'همکاری', icon: 'fa-handshake', tags: ['همکاری', 'تیمی', 'نیمه‌همکاری'] },
   { key: 'competitive', label: 'رقابتی', icon: 'fa-trophy', tags: ['رقابتی'] },
-  { key: 'bluff', label: 'بلوف', icon: 'fa-masks-theater', tags: ['بلوف'] },
+  { key: 'bluff', label: 'بلوف', icon: 'fa-masks-theater', tags: ['بلوف', 'نقش مخفی', 'شرط‌بندی و بلوف', 'خائن'] },
   { key: 'strategy', label: 'استراتژیک', icon: 'fa-chess', tags: ['استراتژی'] },
   { key: 'party', label: 'مهمانی', icon: 'fa-champagne-glasses', tags: ['مهمانی'] },
-  { key: 'brain', label: 'فکری', icon: 'fa-puzzle-piece', tags: ['فکری'] },
+  { key: 'brain', label: 'فکری', icon: 'fa-puzzle-piece', tags: ['فکری', 'انتزاعی', 'پازل', 'استنتاج'] },
 ];
 
 export const EDITION_LABEL: Record<Edition, string> = {

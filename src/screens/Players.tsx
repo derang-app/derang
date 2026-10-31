@@ -5,7 +5,7 @@ import type { Familiarity, Player } from '../db/types';
 import { relativeDays } from '../lib/date';
 import { fa, matchesQuery } from '../lib/text';
 import { FAMILIARITY, GAME_TAGS } from '../lib/vocab';
-import { TagEditor, TextField } from '../ui/fields';
+import { BGG_TAG_CATALOG, TagEditor, TextField } from '../ui/fields';
 import { BackButton, ChipButton, Icon, Loading, PhotoImg, useFlight } from '../ui/kit';
 import { Sheet, useOverlay } from '../ui/overlay';
 import { HiddenInputs, usePhotoImport } from '../ui/PhotoPicker';
@@ -194,8 +194,8 @@ function PlayerSheet({ player, groups, onClose }: { player?: Player; groups: str
             </div>
           )}
         </div>
-        <TagEditor label="از چه سبک‌هایی لذت برده" tags={likes} onChange={setLikes} suggestions={GAME_TAGS} />
-        <TagEditor label="از چه سبک‌هایی استقبال نکرده" tags={dislikes} onChange={setDislikes} suggestions={GAME_TAGS} />
+        <TagEditor label="از چه سبک‌هایی لذت برده" tags={likes} onChange={setLikes} suggestions={GAME_TAGS} catalog={BGG_TAG_CATALOG} />
+        <TagEditor label="از چه سبک‌هایی استقبال نکرده" tags={dislikes} onChange={setDislikes} suggestions={GAME_TAGS} catalog={BGG_TAG_CATALOG} />
         <div className="space-y-2">
           <p className="field-label">آشنایی با بردگیم</p>
           <div className="flex flex-wrap gap-2">

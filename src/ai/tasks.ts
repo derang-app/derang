@@ -7,6 +7,7 @@ import { formatJalali } from '../lib/date';
 import { blobToBase64 } from '../lib/images';
 import type { Candidate, PickerInput } from '../lib/picker';
 import { TIME_WINDOWS } from '../lib/picker';
+import { CATEGORY_TAGS, MECHANIC_TAGS } from '../lib/bggVocab';
 import { EDITION_LABEL, FAMILIARITY, GAME_TAGS, MOODS, STATUS_LABEL } from '../lib/vocab';
 import { AnthropicProvider } from './anthropic';
 import { AiError, type AiProvider, type Part } from './provider';
@@ -151,7 +152,11 @@ const GameCandidate = z.object({
   playTimeMin: z.number().int().nullable(),
   playTimeMax: z.number().int().nullable(),
   complexity: z.number().nullable().describe('پیچیدگی یادگیری ۱ تا ۵'),
-  tags: z.array(z.string()).describe(`از این برچسب‌ها: ${GAME_TAGS.join('، ')}`),
+  tags: z
+    .array(z.string())
+    .describe(
+      `دسته‌بندی‌ها و مکانیزم‌های همین بازی در BoardGameGeek، فقط با این واژه‌ها: ${[...GAME_TAGS, ...CATEGORY_TAGS, ...MECHANIC_TAGS].join('، ')}`,
+    ),
   basis: z.string(),
 });
 

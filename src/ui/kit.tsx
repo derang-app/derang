@@ -75,7 +75,8 @@ export function PhotoImg({
       {url && letterbox ? (
         <>
           <img src={url} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover scale-125 blur-lg opacity-60" draggable={false} />
-          <img src={url} alt={alt} className="relative w-full h-full object-contain" draggable={false} />
+          {/* Absolute, so a tall photo can't stretch an aspect-ratio frame to its own height. */}
+          <img src={url} alt={alt} className="absolute inset-0 w-full h-full object-contain" draggable={false} />
         </>
       ) : url ? (
         <img src={url} alt={alt} className={imgClassName} draggable={false} />
