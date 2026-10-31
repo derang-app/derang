@@ -59,7 +59,7 @@ export default function WorkDetails() {
             {copies.map((c, i) => (
               <div key={c.id} className={cx('edition-card', i === 0 && 'border-[#8E3200]/40 bg-[#FFF9F0]')}>
                 <button type="button" onClick={() => navigate(`/books/${c.id}`)} className="flex items-center gap-4 flex-1 text-right">
-                  <PhotoImg id={c.photoIds[0]} placeholderIcon="fa-image" className="w-12 h-16 rounded-lg flex-shrink-0" />
+                  <PhotoImg frame={3 / 4} id={c.photoIds[0]} placeholderIcon="fa-image" className="w-12 h-16 rounded-lg flex-shrink-0" />
                   <span className="flex-1 min-w-0">
                     <span className="block text-xs font-bold text-[#4F4839] truncate">
                       {c.title}
@@ -133,7 +133,7 @@ export default function WorkDetails() {
               }}
               className="edition-card"
             >
-              <PhotoImg id={b.copy.photoIds[0]} className="w-10 h-14 rounded-lg flex-shrink-0" placeholderIcon="fa-book" />
+              <PhotoImg frame={10 / 14} id={b.copy.photoIds[0]} className="w-10 h-14 rounded-lg flex-shrink-0" placeholderIcon="fa-book" />
               <span className="flex-1 text-right">
                 <span className="block text-xs font-bold">{bookTitle(b)}</span>
                 <span className="block text-[10px] text-gray-500">{b.work?.authors.join('، ')}</span>

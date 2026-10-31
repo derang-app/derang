@@ -295,7 +295,7 @@ function Home({
           {cover && <PhotoImg id={cover} className="absolute inset-0 opacity-50 blur-sm" />}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className={cx('border-2 border-white rounded-2xl relative shadow-2xl bg-white', isBook ? 'w-24 h-36' : 'w-32 h-32')}>
-              <PhotoImg id={cover} placeholderIcon={isBook ? 'fa-book' : 'fa-dice'} className="w-full h-full rounded-xl" />
+              <PhotoImg frame={isBook ? 2 / 3 : 1} id={cover} placeholderIcon={isBook ? 'fa-book' : 'fa-dice'} className="w-full h-full rounded-xl" />
             </div>
           </div>
           <div className="absolute bottom-4 left-0 right-0 text-center">

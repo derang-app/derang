@@ -232,7 +232,7 @@ export default function Identify() {
           {subject.photoIds[0] && <PhotoImg id={subject.photoIds[0]} className="absolute inset-0 opacity-50 blur-sm" />}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-28 h-36 border-2 border-white rounded-2xl relative shadow-2xl bg-white">
-              <PhotoImg id={subject.photoIds[0]} placeholderIcon={kind === 'book' ? 'fa-book' : 'fa-dice'} className="w-full h-full rounded-xl" />
+              <PhotoImg frame={28 / 36} id={subject.photoIds[0]} placeholderIcon={kind === 'book' ? 'fa-book' : 'fa-dice'} className="w-full h-full rounded-xl" />
             </div>
           </div>
           <div className="absolute bottom-4 left-0 right-0 text-center">

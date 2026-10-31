@@ -45,7 +45,7 @@ export default function GameSpecs() {
       <PageHeader title="مشخصات فنی" />
       <main className="px-6 mt-4 space-y-10">
         <section className="flex gap-4">
-          <PhotoImg id={copy.photoIds[0]} placeholderIcon="fa-dice" className="w-20 h-20 rounded-2xl shadow-sm flex-shrink-0" />
+          <PhotoImg frame={1} id={copy.photoIds[0]} placeholderIcon="fa-dice" className="w-20 h-20 rounded-2xl shadow-sm flex-shrink-0" />
           <div className="flex-1 space-y-1 min-w-0">
             <h2 className="text-sm font-bold text-[#4F4839]">{copy.name}</h2>
             {work?.name && <p className="text-[11px] text-gray-500 font-medium ltr text-right">{work.name}</p>}

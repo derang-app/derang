@@ -92,7 +92,7 @@ export default function LogSession() {
 
       <main className="px-6 space-y-8 mt-4">
         <div className="flex items-center gap-4 bg-[#D7A86E]/10 p-4 rounded-3xl border border-[#D7A86E]/20">
-          <PhotoImg id={copy.photoIds[0]} placeholderIcon="fa-dice" className="w-16 h-16 rounded-2xl shadow-sm flex-shrink-0" />
+          <PhotoImg frame={1} id={copy.photoIds[0]} placeholderIcon="fa-dice" className="w-16 h-16 rounded-2xl shadow-sm flex-shrink-0" />
           <div>
             <h2 className="text-sm font-bold text-[#4F4839]">{copy.name}</h2>
             <p className="text-[11px] text-[#8E3200] font-medium">{last ? `آخرین بازی: ${relativeDays(last.at)}` : 'اولین جلسه'}</p>

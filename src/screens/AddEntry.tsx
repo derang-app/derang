@@ -23,7 +23,7 @@ type BookState = ReadStatus | 'wish';
 /** Book fields that can be filled from a Taaghche link. */
 type BookFields = { title: string; author: string; translator: string; publisher: string; publication: string; pages: string; refUrl: string };
 /** Game fields that can be filled from a BoardGameGeek link. */
-type GameFields = { name: string; workName: string; allowed: string; recommended: string; time: string; complexity: string; bgg: string };
+type GameFields = { name: string; workName: string; allowed: string; recommended: string; time: string; complexity: string; brand: string; bgg: string };
 
 /** AddEntry + AddGame designs: one screen with the type switch at the top. */
 export default function AddEntry() {
@@ -172,7 +172,7 @@ export default function AddEntry() {
         const range = parseRange(allowed);
         const t = parseRange(time);
         const { bggId, refUrl } = parseBgg(bgg);
-        const current: GameFields = { name, workName, allowed, recommended, time, complexity, bgg };
+        const current: GameFields = { name, workName, allowed, recommended, time, complexity, brand, bgg };
         const fromBgg = (k: keyof GameFields) => !!bggImport?.fields[k] && bggImport.fields[k] === current[k];
         const copy = await saveWithTimeout(() => createGame({
           name: label,
@@ -201,6 +201,7 @@ export default function AddEntry() {
             ...(fromBgg('recommended') ? ['recommendedPlayers'] : []),
             ...(fromBgg('time') ? ['playTimeMin', 'playTimeMax'] : []),
             ...(fromBgg('complexity') ? ['complexity'] : []),
+            ...(fromBgg('brand') ? ['brand'] : []),
             ...(fromBgg('workName') && !sameName ? ['name'] : []),
             ...(bggImport?.tags.length && bggImport.tags.every((t) => tags.includes(t)) ? ['tags'] : []),
           ],
@@ -322,6 +323,8 @@ export default function AddEntry() {
                   recommended: g.bestPlayers.map((n) => fa(n)).join('، '),
                   time: formatRange(g.playTimeMin, g.playTimeMax),
                   complexity: g.weight !== undefined ? fa(g.weight) : '',
+                  // The original publisher; for a local copy or redesign the user replaces it with what's on the box.
+                  brand: g.publishers[0] ?? '',
                   bgg: g.url,
                 };
                 // Fill only what's still empty; anything the user already typed wins.
@@ -332,6 +335,7 @@ export default function AddEntry() {
                 fill(recommended, setRecommended, fields.recommended);
                 fill(time, setTime, fields.time);
                 fill(complexity, setComplexity, fields.complexity);
+                fill(brand, setBrand, fields.brand);
                 fill(bgg, setBgg, fields.bgg);
                 setTags((t) => [...new Set([...t, ...g.tags])]);
                 setBggImport({ fields, tags: g.tags });
@@ -511,7 +515,7 @@ const TAAGHCHE_SOURCE: LinkSource = {
 
 const BGG_SOURCE: LinkSource = {
   title: 'از لینک BoardGameGeek',
-  blurb: 'عکس جعبه، نام اصلی، تعداد بازیکن، زمان، پیچیدگی و سبک خودکار پر می‌شود.',
+  blurb: 'عکس جعبه، نام اصلی، برند، تعداد بازیکن، زمان، پیچیدگی و سبک خودکار پر می‌شود.',
   button: 'دریافت از BGG',
   placeholder: 'https://boardgamegeek.com/boardgame/…',
   noun: 'بازی BGG',

@@ -91,10 +91,10 @@ export async function createGame(input: NewGameInput): Promise<GameCopy> {
       rating: input.rating,
       notes: input.notes?.trim() || undefined,
       matchStatus: input.confirmed ? 'confirmed' : 'unidentified',
-      provenance: provFor(
-        { name: input.name, edition: input.edition, brand: input.brand?.trim() || undefined, favoritePlayers: input.favoritePlayers },
-        'manual',
-      ),
+      provenance: {
+        ...provFor({ name: input.name, edition: input.edition, brand: input.brand?.trim() || undefined, favoritePlayers: input.favoritePlayers }, 'manual'),
+        ...(input.online?.includes('brand') && input.brand?.trim() ? { brand: 'online' as const } : {}),
+      },
       createdAt: t,
       updatedAt: t,
     };

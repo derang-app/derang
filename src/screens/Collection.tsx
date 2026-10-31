@@ -130,7 +130,7 @@ export default function Collection({ kind }: { kind: 'books' | 'games' }) {
             {shownBooks.map((b) => (
               <Link key={b.copy.id} to={`/books/${b.copy.id}`} className={cx('space-y-2 block', !b.copy.owned && 'opacity-80')}>
                 <div className="relative">
-                  <PhotoImg id={b.copy.photoIds[0]} placeholderIcon="fa-book" className="aspect-[3/4.5] rounded-2xl shadow-sm" alt="" />
+                  <PhotoImg frame={2 / 3} id={b.copy.photoIds[0]} placeholderIcon="fa-book" className="aspect-[3/4.5] rounded-2xl shadow-sm" alt="" />
                   <StatusDot status={b.copy.status} owned={b.copy.owned} />
                 </div>
                 <h3 className="text-[11px] font-bold text-[#4F4839] truncate">{bookTitle(b)}</h3>
@@ -144,7 +144,7 @@ export default function Collection({ kind }: { kind: 'books' | 'games' }) {
             {shownGames.map((g) => (
               <Link key={g.copy.id} to={`/games/${g.copy.id}`} className="wish-card shadow-sm">
                 <div className="relative aspect-square">
-                  <PhotoImg id={g.copy.photoIds[0]} placeholderIcon="fa-dice" className="w-full h-full" alt="" />
+                  <PhotoImg frame={1} id={g.copy.photoIds[0]} placeholderIcon="fa-dice" className="w-full h-full" alt="" />
                   {!g.copy.owned && (
                     <span className="absolute top-3 left-3 bg-[#8E3200] text-white w-8 h-8 rounded-full flex items-center justify-center text-xs shadow-lg" aria-label="علاقه‌مندی">
                       <Icon name="fa-heart" />

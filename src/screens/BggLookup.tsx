@@ -226,7 +226,7 @@ export default function BggLookup() {
               <div className="space-y-6">
                 <div className="bg-white p-5 rounded-[2rem] border border-[#EEE2D3] flex gap-4">
                   <div className="flex flex-col gap-2 items-center flex-shrink-0">
-                    <PhotoImg id={data.copy.photoIds[0]} placeholderIcon="fa-dice" className="w-16 h-16 rounded-2xl" />
+                    <PhotoImg frame={1} id={data.copy.photoIds[0]} placeholderIcon="fa-dice" className="w-16 h-16 rounded-2xl" />
                     <span className="text-[9px] text-gray-500">نسخهٔ من</span>
                   </div>
                   {game.thumbnail && (

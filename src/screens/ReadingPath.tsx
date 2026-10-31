@@ -51,7 +51,7 @@ export default function ReadingPath() {
                   <div key={b.copy.id} className="relative pr-12 pb-8">
                     <div className="timeline-dot" style={{ top: 24, backgroundColor: gi === 0 && i === 0 ? '#8E3200' : undefined }} />
                     <Link to={`/books/${b.copy.id}`} className="bg-white p-5 rounded-[2rem] border border-[#EEE2D3] shadow-sm flex gap-4">
-                      <PhotoImg id={b.copy.photoIds[0]} placeholderIcon="fa-book" className="w-12 h-16 rounded-lg flex-shrink-0" />
+                      <PhotoImg frame={3 / 4} id={b.copy.photoIds[0]} placeholderIcon="fa-book" className="w-12 h-16 rounded-lg flex-shrink-0" />
                       <div className="flex-1 space-y-1 min-w-0">
                         <p className="text-[10px] text-[#8E3200] font-bold">تمام شده در {formatDayMonth(b.copy.finishedAt!)}</p>
                         <h3 className="text-xs font-bold text-[#4F4839] truncate">{bookTitle(b)}</h3>

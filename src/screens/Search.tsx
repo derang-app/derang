@@ -79,7 +79,7 @@ export default function Search() {
           <Section title="کتاب‌ها">
             {results.books.map((b) => (
               <Link key={b.copy.id} to={`/books/${b.copy.id}`} className="edition-card">
-                <PhotoImg id={b.copy.photoIds[0]} placeholderIcon="fa-book" className="w-10 h-14 rounded-lg flex-shrink-0" />
+                <PhotoImg frame={10 / 14} id={b.copy.photoIds[0]} placeholderIcon="fa-book" className="w-10 h-14 rounded-lg flex-shrink-0" />
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-bold truncate">{bookTitle(b)}</span>
                   <span className="block text-[11px] text-gray-500 truncate">
@@ -94,7 +94,7 @@ export default function Search() {
           <Section title="بردگیم‌ها">
             {results.games.map((g) => (
               <Link key={g.copy.id} to={`/games/${g.copy.id}`} className="edition-card">
-                <PhotoImg id={g.copy.photoIds[0]} placeholderIcon="fa-dice" className="w-12 h-12 rounded-xl flex-shrink-0" />
+                <PhotoImg frame={1} id={g.copy.photoIds[0]} placeholderIcon="fa-dice" className="w-12 h-12 rounded-xl flex-shrink-0" />
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-bold truncate">{g.copy.name}</span>
                   <span className="block text-[11px] text-gray-500 truncate ltr text-right">{g.work?.name}</span>

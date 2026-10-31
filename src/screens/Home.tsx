@@ -142,7 +142,7 @@ export default function Home() {
             <div className="flex gap-5 overflow-x-auto pb-4 px-6 hide-scrollbar">
               {recentBooks.map((b) => (
                 <Link key={b.copy.id} to={`/books/${b.copy.id}`} className="w-36 flex-shrink-0">
-                  <PhotoImg
+                  <PhotoImg frame={2 / 3}
                     id={b.copy.photoIds[0]}
                     placeholderIcon="fa-book"
                     className="aspect-[3/4.5] rounded-3xl shadow-lg mb-3"
@@ -176,7 +176,7 @@ export default function Home() {
                     to={`/games/${g.copy.id}`}
                     className="bg-white p-4 rounded-3xl border border-[#EEE2D3] flex gap-4 items-center shadow-sm"
                   >
-                    <PhotoImg id={g.copy.photoIds[0]} placeholderIcon="fa-dice" className="w-20 h-20 rounded-2xl flex-shrink-0" />
+                    <PhotoImg frame={1} id={g.copy.photoIds[0]} placeholderIcon="fa-dice" className="w-20 h-20 rounded-2xl flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start gap-2">
                         <h4 className="text-sm font-bold text-[#4F4839] truncate">{g.copy.name}</h4>
@@ -228,7 +228,7 @@ function ContinueReading({ book }: { book: BookView }) {
   const pct = copy.pageCount ? percent(copy.currentPage ?? 0, copy.pageCount) : undefined;
   return (
     <section className="bg-white p-5 rounded-[2.5rem] border border-[#EEE2D3] shadow-sm flex items-center gap-4">
-      <PhotoImg id={copy.photoIds[0]} placeholderIcon="fa-book" className="w-16 h-24 rounded-2xl shadow-sm flex-shrink-0" />
+      <PhotoImg frame={2 / 3} id={copy.photoIds[0]} placeholderIcon="fa-book" className="w-16 h-24 rounded-2xl shadow-sm flex-shrink-0" />
       <div className="flex-1 space-y-2 min-w-0">
         <div>
           <h3 className="text-sm font-bold text-[#4F4839] truncate">{bookTitle(book)}</h3>

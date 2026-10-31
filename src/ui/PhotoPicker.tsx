@@ -115,7 +115,7 @@ export function PhotoField({
         <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
           {photoIds.map((id, i) => (
             <div key={id} className="relative flex-shrink-0">
-              <PhotoImg id={id} className="w-24 h-32 rounded-2xl shadow-sm" alt={`عکس ${i + 1}`} />
+              <PhotoImg frame={3 / 4} id={id} className="w-24 h-32 rounded-2xl shadow-sm" alt={`عکس ${i + 1}`} />
               <button
                 type="button"
                 aria-label="حذف عکس"

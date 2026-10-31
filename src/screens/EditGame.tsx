@@ -222,7 +222,7 @@ export default function EditGame() {
               }}
               className="edition-card"
             >
-              <PhotoImg id={g.copy.photoIds[0]} className="w-12 h-12 rounded-xl flex-shrink-0" placeholderIcon="fa-dice" />
+              <PhotoImg frame={1} id={g.copy.photoIds[0]} className="w-12 h-12 rounded-xl flex-shrink-0" placeholderIcon="fa-dice" />
               <span className="flex-1 text-right">
                 <span className="block text-xs font-bold">{g.copy.name}</span>
                 <span className="block text-[10px] text-gray-500 ltr text-right">{g.work?.name}</span>

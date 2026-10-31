@@ -43,6 +43,7 @@ export function PhotoImg({
   alt = '',
   placeholderIcon = 'fa-image',
   imgClassName = 'w-full h-full object-cover',
+  frame,
 }: {
   id?: string;
   full?: boolean;
@@ -50,6 +51,11 @@ export function PhotoImg({
   alt?: string;
   placeholderIcon?: string;
   imgClassName?: string;
+  /**
+   * The frame's width/height. A photo of a very different shape (a long game box in a
+   * square frame) is shown whole over a blurred fill of itself instead of being cropped.
+   */
+  frame?: number;
 }) {
   const photo = useLiveQuery(() => (id ? db.photos.get(id) : undefined), [id]);
   const [url, setUrl] = useState<string>();
@@ -62,9 +68,16 @@ export function PhotoImg({
     setUrl(u);
     return () => URL.revokeObjectURL(u);
   }, [photo, full]);
+  const ratio = photo && photo.height > 0 ? photo.width / photo.height : undefined;
+  const letterbox = !!frame && !!ratio && (ratio / frame > 1.25 || frame / ratio > 1.25);
   return (
-    <div className={cx('overflow-hidden', className)}>
-      {url ? (
+    <div className={cx('overflow-hidden', letterbox && 'relative', className)}>
+      {url && letterbox ? (
+        <>
+          <img src={url} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover scale-125 blur-lg opacity-60" draggable={false} />
+          <img src={url} alt={alt} className="relative w-full h-full object-contain" draggable={false} />
+        </>
+      ) : url ? (
         <img src={url} alt={alt} className={imgClassName} draggable={false} />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-[#D7A86E]/10 text-[#D7A86E]">

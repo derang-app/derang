@@ -107,7 +107,7 @@ export default function BookDetails() {
       <section className="relative pt-24 pb-12 px-6 flex flex-col items-center">
         <div className="absolute top-0 left-0 right-0 h-80 bg-gradient-to-b from-[#D7A86E]/20 to-transparent -z-10" />
         <button type="button" aria-label="جلد باکیفیت" onClick={() => navigate(`/cover/book/${copy.id}`)} className="mb-8 transform -rotate-2 active:scale-95 transition-transform">
-          <PhotoImg id={copy.photoIds[0]} full placeholderIcon="fa-book" alt={copy.title} className="w-48 aspect-[3/4.5] rounded-[2rem] shadow-2xl" />
+          <PhotoImg frame={2 / 3} id={copy.photoIds[0]} full placeholderIcon="fa-book" alt={copy.title} className="w-48 aspect-[3/4.5] rounded-[2rem] shadow-2xl" />
         </button>
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-[#4F4839] leading-snug">{copy.title}</h1>
@@ -625,7 +625,7 @@ function CopyTab({ copy }: { copy: BookCopy }) {
       {copy.photoIds.length > 1 && (
         <div className="flex gap-3 overflow-x-auto hide-scrollbar">
           {copy.photoIds.map((pid) => (
-            <PhotoImg key={pid} id={pid} className="w-24 h-32 rounded-2xl flex-shrink-0" />
+            <PhotoImg frame={3 / 4} key={pid} id={pid} className="w-24 h-32 rounded-2xl flex-shrink-0" />
           ))}
         </div>
       )}

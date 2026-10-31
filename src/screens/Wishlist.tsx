@@ -45,7 +45,7 @@ export default function Wishlist() {
           wishBooks.map((b) => (
             <Link key={b.copy.id} to={`/books/${b.copy.id}`} className="wish-card shadow-sm">
               <div className="relative aspect-[3/4]">
-                <PhotoImg id={b.copy.photoIds[0]} placeholderIcon="fa-book" className="w-full h-full" />
+                <PhotoImg frame={3 / 4} id={b.copy.photoIds[0]} placeholderIcon="fa-book" className="w-full h-full" />
                 <span className="absolute top-3 left-3 bg-[#8E3200] text-white w-8 h-8 rounded-full flex items-center justify-center text-xs shadow-lg">
                   <Icon name="fa-heart" />
                 </span>
@@ -61,7 +61,7 @@ export default function Wishlist() {
           wishGames.map((g) => (
             <Link key={g.copy.id} to={`/games/${g.copy.id}`} className="wish-card shadow-sm">
               <div className="relative aspect-[3/4]">
-                <PhotoImg id={g.copy.photoIds[0]} placeholderIcon="fa-dice" className="w-full h-full" />
+                <PhotoImg frame={3 / 4} id={g.copy.photoIds[0]} placeholderIcon="fa-dice" className="w-full h-full" />
                 <span className="absolute top-3 left-3 bg-[#8E3200] text-white w-8 h-8 rounded-full flex items-center justify-center text-xs shadow-lg">
                   <Icon name="fa-heart" />
                 </span>

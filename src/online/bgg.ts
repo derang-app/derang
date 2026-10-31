@@ -119,6 +119,8 @@ export interface BggGame {
   weightVotes: number;
   categories: string[];
   mechanics: string[];
+  /** Publishers, the original one first; placeholders like "(Unknown)" left out. */
+  publishers: string[];
   /** Persian style tags derived from BGG categories/mechanics/rank families. */
   tags: string[];
   url: string;
@@ -197,6 +199,7 @@ export function parseThing(doc: Document): BggGame | undefined {
     weightVotes,
     categories,
     mechanics,
+    publishers: links('boardgamepublisher').filter((p) => p && !/^\(.*\)$/.test(p)).slice(0, 10),
     tags,
     url: `https://boardgamegeek.com/boardgame/${id}`,
   };

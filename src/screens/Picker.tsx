@@ -323,7 +323,7 @@ function Result({
 
         <div className="result-card w-full space-y-6">
           <button type="button" onClick={() => navigate(`/games/${main.game.copy.id}`)} className="relative block w-full aspect-square rounded-[2rem] overflow-hidden shadow-lg">
-            <PhotoImg id={main.game.copy.photoIds[0]} full placeholderIcon="fa-dice" className="w-full h-full" />
+            <PhotoImg frame={1} id={main.game.copy.photoIds[0]} full placeholderIcon="fa-dice" className="w-full h-full" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-6 text-right">
               <span className="text-[10px] text-white/80 font-bold uppercase tracking-widest mb-1">بازی پیشنهادی</span>
               <h3 className="text-2xl font-bold text-white">{main.game.copy.name}</h3>
@@ -405,7 +405,7 @@ function Result({
                   onClick={() => navigate(`/games/${m.game.copy.id}`)}
                   className="w-full bg-white/50 p-3 rounded-2xl border border-[#EEE2D3] flex gap-4 items-center text-right"
                 >
-                  <PhotoImg id={m.game.copy.photoIds[0]} placeholderIcon="fa-dice" className="w-12 h-12 rounded-xl flex-shrink-0 opacity-80" />
+                  <PhotoImg frame={1} id={m.game.copy.photoIds[0]} placeholderIcon="fa-dice" className="w-12 h-12 rounded-xl flex-shrink-0 opacity-80" />
                   <div className="flex-1 min-w-0">
                     <h4 className="text-xs font-bold text-[#4F4839] truncate">{m.game.copy.name}</h4>
                     <p className="text-[10px] text-gray-500 truncate">{m.reasons[0] ?? ''}</p>
