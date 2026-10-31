@@ -11,7 +11,7 @@ import { formatJalali } from '../lib/date';
 import { fa } from '../lib/text';
 import { BGG_APPLICATIONS_URL, BGG_ERROR_TEXT, BGG_SECRET, BggError, searchBgg } from '../online/bgg';
 import { Choice, TextField } from '../ui/fields';
-import { cx, Icon, Loading, PageHeader, PhotoImg, PrimaryButton, Toggle, useFlight } from '../ui/kit';
+import { cx, Icon, Loading, PageHeader, PhotoImg, PoweredByBgg, PrimaryButton, Toggle, useFlight } from '../ui/kit';
 import { useOverlay } from '../ui/overlay';
 import { HiddenInputs, usePhotoImport } from '../ui/PhotoPicker';
 
@@ -472,9 +472,8 @@ export function BggSettings() {
             </button>
           </>
         )}
-        <p className="text-[10px] text-center text-gray-400">
-          Powered by BoardGameGeek. هر درخواست با فاصلهٔ حداقل دو ثانیه فرستاده می‌شود.
-        </p>
+        <PoweredByBgg />
+        <p className="text-[10px] text-center text-gray-400">هر درخواست با فاصلهٔ حداقل دو ثانیه فرستاده می‌شود.</p>
       </main>
     </div>
   );

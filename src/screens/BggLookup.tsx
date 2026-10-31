@@ -12,7 +12,7 @@ import { fa, formatRange } from '../lib/text';
 import { setCoverFromBlob } from '../lib/cover';
 import { BGG_ERROR_TEXT, BGG_SECRET, BggError, fetchBggGame, searchBgg, type BggGame, type BggSearchHit } from '../online/bgg';
 import { COVER_ERROR_TEXT, CoverError, downloadImage } from '../online/covers';
-import { BottomAction, Icon, Loading, PageHeader, PhotoImg, Spinner } from '../ui/kit';
+import { BottomAction, Icon, Loading, PageHeader, PhotoImg, PoweredByBgg, Spinner } from '../ui/kit';
 import { useOverlay } from '../ui/overlay';
 import { NotFound } from './BookDetails';
 
@@ -313,12 +313,7 @@ export default function BggLookup() {
             )}
           </>
         )}
-        <p className="text-[10px] text-center text-gray-400 pt-4">
-          Powered by{' '}
-          <a href="https://boardgamegeek.com" target="_blank" rel="noreferrer noopener" className="underline">
-            BoardGameGeek
-          </a>
-        </p>
+        <PoweredByBgg className="pt-4" />
       </main>
       {game && !busy && (
         <BottomAction>

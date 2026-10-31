@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, isConnected } from '../db/db';
 import { fa } from '../lib/text';
+import poweredByBgg from '../assets/powered-by-bgg.svg';
 
 /** Wraps async handlers so a double tap runs them once; `busy` is true while one runs. */
 export function useFlight() {
@@ -251,6 +252,15 @@ export function AiBanner({
         </button>
       )}
     </div>
+  );
+}
+
+/** BGG's API terms require their "Powered by BGG" logo, linked back to them, wherever BGG data shows. */
+export function PoweredByBgg({ className }: { className?: string }) {
+  return (
+    <a href="https://boardgamegeek.com" target="_blank" rel="noreferrer noopener" className={cx('block w-fit mx-auto', className)}>
+      <img src={poweredByBgg} alt="Powered by BoardGameGeek" width={137} height={30} className="h-[30px] w-auto" />
+    </a>
   );
 }
 
